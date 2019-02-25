@@ -3,7 +3,7 @@ package loader
 import (
 	"fmt"
 
-	"github.com/efritz/ij/asset"
+	"github.com/efritz/api-test/asset"
 	"github.com/ghodss/yaml"
 	"github.com/xeipuuv/gojsonschema"
 )
