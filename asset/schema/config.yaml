@@ -1,0 +1,7 @@
+---
+
+type: object
+properties:
+  tests:
+    type: array
+additionalProperties: false
