@@ -21,7 +21,7 @@ const Version = "0.1.0"
 
 func main() {
 	opts := &Options{
-		ConfigPath: "test.yaml",
+		ConfigPath: "api-test.yaml",
 	}
 
 	app := kingpin.New("api-test", "api-test is a test runner against a local API.").Version(Version)

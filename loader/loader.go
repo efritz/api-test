@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 
 	"github.com/efritz/api-test/config"
+	"github.com/efritz/api-test/loader/jsonconfig"
 	"github.com/ghodss/yaml"
 )
 
@@ -36,10 +37,7 @@ func Load(path string) (*config.Config, error) {
 		)
 	}
 
-	payload := &jsonConfig{
-		Tests: []string{},
-	}
-
+	payload := &jsonconfig.Config{}
 	if err := json.Unmarshal(data, payload); err != nil {
 		return nil, err
 	}

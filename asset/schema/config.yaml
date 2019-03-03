@@ -1,7 +1,82 @@
 ---
 
+definitions:
+  global-request:
+    base-url:
+      type: string
+    headers:
+      $ref: '#/definitions/headers'
+    auth:
+      $ref: '#/definitions/auth'
+  test:
+    type: object
+    properties:
+      name:
+        type: string
+      request:
+        $ref: '#/definitions/request'
+      response:
+        $ref: '#/definitions/response'
+    additionalProperties: false
+    required:
+      - request
+  request:
+    type: object
+    properties:
+      uri:
+        type: string
+      method:
+        type: string
+        enum:
+          - get
+          - post
+          - put
+          - patch
+          - delete
+          - options
+      headers:
+        $ref: '#/definitions/headers'
+      auth:
+        $ref: '#/definitions/auth'
+      body:
+        type: string
+    additionalProperties: false
+    required:
+      - uri
+  response:
+    type: object
+    properties:
+      status:
+        anyOf:
+          - type: string
+          - type: number
+      headers:
+        $ref: '#/definitions/headers'
+      body:
+        type: string
+    additionalProperties: false
+  headers:
+    type: object
+    additionalProperties:
+      type: string
+  auth:
+    type: object
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+    additionalProperties: false
+    required:
+      - username
+      - password
+
 type: object
 properties:
+  global-request:
+    $ref: '#/definitions/global-request'
   tests:
     type: array
+    items:
+      $ref: '#/definitions/test'
 additionalProperties: false

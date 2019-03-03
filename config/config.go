@@ -2,7 +2,8 @@ package config
 
 type (
 	Config struct {
-		// TODO
-		Tests []string
+		BaseURL              string
+		GlobalRequestHeaders map[string]string
+		Tests                []*Test
 	}
 )
