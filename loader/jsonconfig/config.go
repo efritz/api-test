@@ -1,34 +1,39 @@
 package jsonconfig
 
-import "github.com/efritz/api-test/config"
+import (
+	"encoding/json"
+
+	"github.com/efritz/api-test/config"
+)
 
 type (
-	Config struct {
+	BaseConfig struct {
+		Scenarios []*Scenario     `json:"scenarios"`
+		Includes  json.RawMessage `json:"include"`
+	}
+
+	MainConfig struct {
+		*BaseConfig
 		GlobalRequest *GlobalRequest `json:"global-request"`
-		Tests         []*Test        `json:"tests"`
 	}
 
 	GlobalRequest struct {
-		BaseURL string            `json:"base-url"`
-		Auth    *BasicAuth        `json:"auth"`
-		Headers map[string]string `json:"headers"`
+		BaseURL string                     `json:"base-url"`
+		Auth    *BasicAuth                 `json:"auth"`
+		Headers map[string]json.RawMessage `json:"headers"`
 	}
 )
 
-func (c *Config) Translate() (*config.Config, error) {
-	tests := []*config.Test{}
-	for _, jsonTest := range c.Tests {
-		test, err := jsonTest.Translate(c.GlobalRequest)
+func (c *BaseConfig) Translate(globalRequest *GlobalRequest) ([]*config.Scenario, error) {
+	scenarios := []*config.Scenario{}
+	for _, jsonScenario := range c.Scenarios {
+		scenario, err := jsonScenario.Translate(globalRequest)
 		if err != nil {
 			return nil, err
 		}
 
-		tests = append(tests, test)
+		scenarios = append(scenarios, scenario)
 	}
 
-	config := &config.Config{
-		Tests: tests,
-	}
-
-	return config, nil
+	return scenarios, nil
 }

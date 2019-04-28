@@ -6,12 +6,14 @@ import (
 	"regexp"
 
 	"github.com/efritz/api-test/config"
+	"github.com/efritz/api-test/loader/util"
 )
 
 type Response struct {
-	Status  *json.RawMessage  `json:"status"`
-	Body    string            `json:"body"`
-	Headers map[string]string `json:"headers"`
+	Status  *json.RawMessage           `json:"status"`
+	Headers map[string]json.RawMessage `json:"headers"`
+	Body    string                     `json:"body"`
+	Extract string                     `json:"extract"`
 }
 
 var patternOK = regexp.MustCompile("2..")
@@ -22,14 +24,24 @@ func (c *Response) Translate() (*config.Response, error) {
 		return nil, err
 	}
 
-	headers := map[string]*regexp.Regexp{}
-	for key, value := range c.Headers {
-		pattern, err := regexp.Compile(value)
+	headers := map[string][]*regexp.Regexp{}
+	for name, raw := range c.Headers {
+		values, err := util.UnmarshalStringList(raw)
 		if err != nil {
 			return nil, err
 		}
 
-		headers[key] = pattern
+		patterns := []*regexp.Regexp{}
+		for _, value := range values {
+			pattern, err := regexp.Compile(value)
+			if err != nil {
+				return nil, err
+			}
+
+			patterns = append(patterns, pattern)
+		}
+
+		headers[name] = patterns
 	}
 
 	body, err := regexp.Compile(c.Body)
@@ -41,6 +53,7 @@ func (c *Response) Translate() (*config.Response, error) {
 		Status:  status,
 		Headers: headers,
 		Body:    body,
+		Extract: c.Extract,
 	}, nil
 }
 

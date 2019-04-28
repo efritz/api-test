@@ -7,13 +7,6 @@ definitions:
       - type: array
         items:
           type: string
-  global-request:
-    base-url:
-      type: string
-    auth:
-      $ref: '#/definitions/auth'
-    headers:
-      $ref: '#/definitions/headers'
   scenario:
     type: object
     properties:
@@ -55,10 +48,10 @@ definitions:
           - patch
           - delete
           - options
-      headers:
-        $ref: '#/definitions/headers'
       auth:
         $ref: '#/definitions/auth'
+      headers:
+        $ref: '#/definitions/headers'
       body:
         type: string
       json-body: {}
@@ -97,8 +90,6 @@ definitions:
 
 type: object
 properties:
-  global-request:
-    $ref: '#/definitions/global-request'
   scenarios:
     type: array
     items:

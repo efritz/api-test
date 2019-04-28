@@ -2,8 +2,6 @@ package logging
 
 import (
 	"fmt"
-
-	"github.com/mgutz/ansi"
 )
 
 type (
@@ -16,7 +14,6 @@ type (
 
 	logger struct {
 		colorize bool
-		quiet    bool
 		verbose  bool
 	}
 
@@ -25,10 +22,9 @@ type (
 
 var NilLogger = &nilLogger{}
 
-func NewLogger(colorize, quiet, verbose bool) Logger {
+func NewLogger(colorize, verbose bool) Logger {
 	return &logger{
 		colorize: colorize,
-		quiet:    quiet,
 		verbose:  verbose,
 	}
 }
@@ -50,17 +46,12 @@ func (l *logger) Error(format string, args ...interface{}) {
 }
 
 func (l *logger) log(level LogLevel, message string) {
-	if l.quiet || (level == LevelDebug && !l.verbose) {
+	if level == LevelDebug && !l.verbose {
 		return
 	}
 
 	if l.colorize {
-		message = fmt.Sprintf(
-			"%s%s%s",
-			levelColors[level],
-			message,
-			ansi.Reset,
-		)
+		message = Colorize(message, level)
 	}
 
 	fmt.Println(message)

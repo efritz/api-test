@@ -1,6 +1,11 @@
 package jsonconfig
 
-import "github.com/efritz/api-test/config"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/efritz/api-test/config"
+)
 
 type Test struct {
 	Name     string    `json:"name"`
@@ -27,8 +32,17 @@ func (c *Test) Translate(globalRequest *GlobalRequest) (*config.Test, error) {
 		return nil, err
 	}
 
+	name := c.Name
+	if name == "" {
+		name = fmt.Sprintf(
+			"%s %s",
+			strings.ToUpper(request.Method),
+			c.Request.URI,
+		)
+	}
+
 	return &config.Test{
-		Name:     c.Name,
+		Name:     name,
 		Request:  request,
 		Response: response,
 	}, nil

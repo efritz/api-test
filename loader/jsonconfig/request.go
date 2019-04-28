@@ -1,54 +1,56 @@
 package jsonconfig
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	tmpl "text/template"
 
+	"github.com/efritz/api-test/loader/util"
 	"github.com/efritz/api-test/config"
 )
 
 type (
 	Request struct {
-		URI     string            `json:"uri"`
-		Method  string            `json:"method"`
-		Body    string            `json:"body"`
-		Headers map[string]string `json:"headers"`
-		Auth    *BasicAuth        `json:"auth"`
+		URI      string                     `json:"uri"`
+		Method   string                     `json:"method"`
+		Auth     *BasicAuth                 `json:"auth"`
+		Headers  map[string]json.RawMessage `json:"headers"`
+		Body     string                     `json:"body"`
+		JSONBody json.RawMessage            `json:"json-body"`
+		// TODO - templated JSON body
+		// TODO - form
+		// TODO - file
 	}
 )
 
 func (c *Request) Translate(globalRequest *GlobalRequest) (*config.Request, error) {
-	method := c.Method
-	if method == "" {
-		method = "get"
+	method := sanitizeMethod(c.Method)
+	url := sanitizeURL(c.URI, globalRequest)
+	jsonAuth := sanitizeAuth(c.Auth, globalRequest)
+	headers, err := sanitizeHeaders(c.Headers, globalRequest)
+	if err != nil {
+		return nil, err
 	}
 
-	url := c.URI
-	headers := c.Headers
-	jsonAuth := c.Auth
-
-	if headers == nil {
-		headers = map[string]string{}
+	urlTemplate, err := compile(url)
+	if err != nil {
+		return nil, fmt.Errorf("illegal uri template")
 	}
 
-	if globalRequest != nil {
-		if globalRequest.BaseURL != "" && isRelative(url) {
-			url = fmt.Sprintf(
-				"%s/%s",
-				strings.TrimRight(globalRequest.BaseURL, "/"),
-				strings.TrimLeft(url, "/"),
-			)
-
-			for key, val := range globalRequest.Headers {
-				if _, ok := headers[key]; !ok {
-					headers[key] = val
-				}
+	headerTemplates := map[string][]*tmpl.Template{}
+	for name, values := range headers {
+		templates := []*tmpl.Template{}
+		for _, value := range values {
+			template, err := compile(value)
+			if err != nil {
+				return nil, fmt.Errorf("illegal header template")
 			}
 
-			if jsonAuth == nil {
-				jsonAuth = globalRequest.Auth
-			}
+			templates = append(templates, template)
 		}
+
+		headerTemplates[name] = templates
 	}
 
 	auth, err := jsonAuth.Translate()
@@ -56,13 +58,84 @@ func (c *Request) Translate(globalRequest *GlobalRequest) (*config.Request, erro
 		return nil, err
 	}
 
+	if c.Body != "" && c.JSONBody != nil {
+		return nil, fmt.Errorf("multiple bodies supplied")
+	}
+
+	var bodyTemplate *tmpl.Template
+
+	if c.Body != "" {
+		bodyTemplate, err = compile(c.Body)
+		if err != nil {
+			return nil, fmt.Errorf("illegal body template")
+		}
+	}
+
+	if c.JSONBody != nil {
+		bodyTemplate, err = compile(string(c.JSONBody))
+		if err != nil {
+			return nil, fmt.Errorf("illegal JSON body template")
+		}
+	}
+
 	return &config.Request{
-		URI:     url,
+		URL:     urlTemplate,
 		Method:  method,
-		Headers: headers,
+		Headers: headerTemplates,
 		Auth:    auth,
-		Body:    c.Body,
+		Body:    bodyTemplate,
 	}, nil
+}
+
+func sanitizeMethod(method string) string {
+	if method == "" {
+		return "get"
+	}
+
+	return method
+}
+
+func sanitizeURL(uri string, globalRequest *GlobalRequest) string {
+	if globalRequest == nil || globalRequest.BaseURL == "" || !isRelative(uri) {
+		return uri
+	}
+
+	return fmt.Sprintf("%s/%s", strings.TrimRight(globalRequest.BaseURL, "/"), strings.TrimLeft(uri, "/"))
+}
+
+func sanitizeHeaders(rawHeaders map[string]json.RawMessage, globalRequest *GlobalRequest) (map[string][]string, error) {
+	headers := map[string][]string{}
+	for name, raw := range rawHeaders {
+		values, err := util.UnmarshalStringList(raw)
+		if err != nil {
+			return nil, err
+		}
+
+		headers[name] = values
+	}
+
+	if globalRequest != nil {
+		for name, raw := range globalRequest.Headers {
+			values, err := util.UnmarshalStringList(raw)
+			if err != nil {
+				return nil, err
+			}
+
+			if _, ok := headers[name]; !ok {
+				headers[name] = values
+			}
+		}
+	}
+
+	return headers, nil
+}
+
+func sanitizeAuth(auth *BasicAuth, globalRequest *GlobalRequest) *BasicAuth {
+	if auth == nil && globalRequest != nil {
+		return globalRequest.Auth
+	}
+
+	return auth
 }
 
 func isRelative(uri string) bool {
@@ -73,4 +146,8 @@ func isRelative(uri string) bool {
 	}
 
 	return true
+}
+
+func compile(template string) (*tmpl.Template, error) {
+	return tmpl.New("").Parse(template)
 }

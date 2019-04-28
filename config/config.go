@@ -1,9 +1,5 @@
 package config
 
-type (
-	Config struct {
-		BaseURL              string
-		GlobalRequestHeaders map[string]string
-		Tests                []*Test
-	}
-)
+type Config struct {
+	Scenarios map[string]*Scenario
+}

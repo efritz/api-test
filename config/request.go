@@ -1,12 +1,16 @@
 package config
 
+import (
+	tmpl "text/template"
+)
+
 type (
 	Request struct {
-		URI     string
+		URL     *tmpl.Template
 		Method  string
-		Headers map[string]string
 		Auth    *BasicAuth
-		Body    string
+		Headers map[string][]*tmpl.Template
+		Body    *tmpl.Template
 	}
 
 	BasicAuth struct {

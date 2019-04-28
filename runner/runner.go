@@ -1,87 +1,186 @@
 package runner
 
 import (
-	"bytes"
-	"fmt"
+	"encoding/xml"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/efritz/api-test/config"
 	"github.com/efritz/api-test/logging"
+	"github.com/efritz/pentimento"
 )
 
 type Runner struct {
-	config *config.Config
-	logger logging.Logger
+	config          *config.Config
+	logger          logging.Logger
+	junitReportPath string
+	client          *http.Client
+	names           []string
+	contexts        map[string]*ScenarioContext
+	halt            chan struct{}
+	wg              sync.WaitGroup
 }
 
-func NewRunner(config *config.Config, logger logging.Logger) *Runner {
+func NewRunner(config *config.Config, logger logging.Logger, junitReportPath string) *Runner {
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	names := []string{}
+	contexts := map[string]*ScenarioContext{}
+
+	for name, scenario := range config.Scenarios {
+		names = append(names, name)
+		contexts[name] = NewScenarioContext(scenario)
+	}
+
+	sort.Strings(names)
+
 	return &Runner{
-		config: config,
-		logger: logger,
+		config:          config,
+		logger:          logger,
+		junitReportPath: junitReportPath,
+		client:          client,
+		names:           names,
+		contexts:        contexts,
+		halt:            make(chan struct{}),
 	}
 }
 
 func (r *Runner) Run() error {
-	for _, test := range r.config.Tests {
-		r.logger.Info("Starting test %s", test.Name)
+	started := time.Now()
+	r.submitReady()
 
-		req, err := buildRequest(test.Request)
+	go func() {
+		defer close(r.halt)
+		r.wg.Wait()
+	}()
+
+	pentimento.PrintProgress(func(p *pentimento.Printer) error {
+	outer:
+		for {
+			select {
+			case <-r.halt:
+				break outer
+			case <-time.After(time.Millisecond * 100):
+			}
+
+			displayProgress(r.names, r.contexts, p)
+		}
+
+		displayProgress(r.names, r.contexts, p)
+		return nil
+	})
+
+	displaySummary(r.contexts, started, r.logger)
+
+	if r.junitReportPath != "" {
+		content, err := formatJUnitReport(r.contexts)
 		if err != nil {
 			return err
 		}
 
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
+		content = append([]byte(xml.Header), content...)
 
-		if err := checkResponse(resp, test.Response); err != nil {
-			r.logger.Error("Failure: %s", err.Error())
+		if err := ioutil.WriteFile(r.junitReportPath, content, 0644); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func buildRequest(prototype *config.Request) (*http.Request, error) {
-	req, err := http.NewRequest(
-		strings.ToUpper(prototype.Method),
-		prototype.URI,
-		bytes.NewReader([]byte(prototype.Body)),
-	)
+func (r *Runner) submitReady() {
+	skipped := false
 
-	if err != nil {
-		return nil, err
-	}
+	for _, context := range r.contexts {
+		if !context.Pending {
+			continue
+		}
 
-	return req, err
-}
+		shouldSkip := false
+		shouldSubmit := true
 
-func checkResponse(resp *http.Response, expected *config.Response) error {
-	defer resp.Body.Close()
+		for _, dependency := range context.Scenario.Dependencies {
+			if r.contexts[dependency].Skipped || r.contexts[dependency].Failed() {
+				shouldSkip = true
+			}
 
-	if !expected.Status.MatchString(fmt.Sprintf("%d", resp.StatusCode)) {
-		return fmt.Errorf("status code mismatch '%d' != '%s'", resp.StatusCode, expected.Status)
-	}
+			if !r.contexts[dependency].Resolved() {
+				shouldSubmit = false
+			}
+		}
 
-	for key, pattern := range expected.Headers {
-		value := resp.Header.Get(key)
+		if shouldSkip {
+			skipped = true
+			context.Skipped = true
+			context.Pending = false
+			continue
+		}
 
-		if !pattern.MatchString(value) {
-			return fmt.Errorf("header value mismatch '%s' != '%s'", value, pattern)
+		if shouldSubmit {
+			context.Pending = false
+
+			r.wg.Add(1)
+			go r.submit(context)
 		}
 	}
 
-	content, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	if skipped {
+		r.submitReady()
+	}
+}
+
+func (r *Runner) submit(context *ScenarioContext) {
+	defer r.wg.Done()
+
+	r.prepareContext(context)
+
+	for result := range context.Run(r.client) {
+		context.Results = append(context.Results, result)
 	}
 
-	if !expected.Body.Match(content) {
-		return fmt.Errorf("body mismatch '%s' != '%s'", content, expected.Body)
+	r.submitReady()
+}
+
+func (r *Runner) prepareContext(context *ScenarioContext) {
+	context.Context = map[string]interface{}{}
+
+	envMap := map[string]string{}
+	for _, pair := range os.Environ() {
+		parts := strings.Split(pair, "=")
+		envMap[parts[0]] = parts[1]
 	}
 
-	return nil
+	context.Context["env"] = envMap
+
+	for _, dependency := range r.getAllDependencies(context) {
+		context.Context[dependency] = r.contexts[dependency].Context
+	}
+}
+
+func (r *Runner) getAllDependencies(context *ScenarioContext) []string {
+	dependencies := map[string]bool{}
+	for _, dependency := range context.Scenario.Dependencies {
+		dependencies[dependency] = true
+
+		for _, dependency := range r.getAllDependencies(r.contexts[dependency]) {
+			dependencies[dependency] = true
+		}
+	}
+
+	flattened := []string{}
+	for dependency := range dependencies {
+		flattened = append(flattened, dependency)
+	}
+
+	sort.Strings(flattened)
+	return flattened
 }

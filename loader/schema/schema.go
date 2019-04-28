@@ -1,4 +1,4 @@
-package loader
+package schema
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-func validate(name string, data []byte) error {
+func Validate(name string, data []byte) error {
 	schema, err := getSchema(name)
 	if err != nil {
 		return err
@@ -21,6 +21,8 @@ func validate(name string, data []byte) error {
 
 	if !result.Valid() {
 		for _, err := range result.Errors() {
+			fmt.Printf("Error: %#v\n", err)
+
 			resultError, ok := err.(gojsonschema.ResultError)
 			if !ok {
 				continue
