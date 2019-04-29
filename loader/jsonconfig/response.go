@@ -10,7 +10,7 @@ import (
 )
 
 type Response struct {
-	Status  *json.RawMessage           `json:"status"`
+	Status  json.RawMessage            `json:"status"`
 	Headers map[string]json.RawMessage `json:"headers"`
 	Body    string                     `json:"body"`
 	Extract string                     `json:"extract"`
@@ -35,7 +35,7 @@ func (c *Response) Translate() (*config.Response, error) {
 		for _, value := range values {
 			pattern, err := regexp.Compile(value)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("illegal header regex")
 			}
 
 			patterns = append(patterns, pattern)
@@ -46,7 +46,7 @@ func (c *Response) Translate() (*config.Response, error) {
 
 	body, err := regexp.Compile(c.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("illegal body regex")
 	}
 
 	return &config.Response{
@@ -57,19 +57,24 @@ func (c *Response) Translate() (*config.Response, error) {
 	}, nil
 }
 
-func unmarshalStatus(data *json.RawMessage) (*regexp.Regexp, error) {
-	if data == nil {
+func unmarshalStatus(data json.RawMessage) (*regexp.Regexp, error) {
+	if len(data) == 0 {
 		return patternOK, nil
 	}
 
 	var num int
-	if err := json.Unmarshal(*data, &num); err == nil {
+	if err := json.Unmarshal(data, &num); err == nil {
 		return regexp.Compile(fmt.Sprintf("%d", num))
 	}
 
 	var str string
-	if err := json.Unmarshal(*data, &str); err == nil {
-		return regexp.Compile(str)
+	if err := json.Unmarshal(data, &str); err == nil {
+		pattern, err := regexp.Compile(str)
+		if err != nil {
+			return nil, fmt.Errorf("illegal status regex")
+		}
+
+		return pattern, nil
 	}
 
 	return nil, fmt.Errorf("status value is neither string nor int")
