@@ -13,7 +13,7 @@ func (c *BasicAuth) Translate() (*config.BasicAuth, error) {
 	}
 
 	return &config.BasicAuth{
-		Username: c.Username,
+		Username: c.Username, // TODO - should compile
 		Password: c.Password,
 	}, nil
 }

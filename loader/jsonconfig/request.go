@@ -6,8 +6,8 @@ import (
 	"strings"
 	tmpl "text/template"
 
-	"github.com/efritz/api-test/loader/util"
 	"github.com/efritz/api-test/config"
+	"github.com/efritz/api-test/loader/util"
 )
 
 type (
@@ -74,7 +74,7 @@ func (c *Request) Translate(globalRequest *GlobalRequest) (*config.Request, erro
 	if c.JSONBody != nil {
 		bodyTemplate, err = compile(string(c.JSONBody))
 		if err != nil {
-			return nil, fmt.Errorf("illegal JSON body template")
+			return nil, fmt.Errorf("illegal json body template")
 		}
 	}
 

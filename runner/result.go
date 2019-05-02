@@ -6,15 +6,15 @@ import (
 )
 
 type TestResult struct {
-	Request      *http.Request
-	RequestBody  string
-	Response     *http.Response
-	ResponseBody string
-	MatchErrors  []MatchError
-	Err          error
-	Duration     time.Duration
+	Request            *http.Request
+	RequestBody        string
+	Response           *http.Response
+	ResponseBody       string
+	RequestMatchErrors []RequestMatchError
+	Err                error
+	Duration           time.Duration
 }
 
 func (r *TestResult) Failed() bool {
-	return r.Err != nil || len(r.MatchErrors) > 0
+	return r.Err != nil || len(r.RequestMatchErrors) > 0
 }

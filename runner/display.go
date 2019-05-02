@@ -128,7 +128,7 @@ func displayFailure(
 		return
 	}
 
-	for _, err := range result.MatchErrors {
+	for _, err := range result.RequestMatchErrors {
 		logger.Error(
 			"> %s:\n\t  Actual: '%s'\n\tExpected: '%s'",
 			err.Type,
@@ -157,7 +157,7 @@ func getStatus(context *ScenarioContext) *pentimento.AnimatedString {
 			return passStatus
 		}
 
-		if len(lastResult.MatchErrors) > 0 {
+		if len(lastResult.RequestMatchErrors) > 0 {
 			return failedStatus
 		}
 

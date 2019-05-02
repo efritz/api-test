@@ -77,7 +77,7 @@ func (c *ScenarioContext) Run(client *http.Client) <-chan *TestResult {
 
 			ch <- result
 
-			if result.Err != nil || len(result.MatchErrors) > 0 {
+			if result.Err != nil || len(result.RequestMatchErrors) > 0 {
 				break
 			}
 		}
@@ -101,7 +101,7 @@ func (c *ScenarioContext) runTest(client *http.Client, test *config.Test) (*Test
 
 	duration := time.Now().Sub(started)
 
-	resp, respBody, extraction, errors, err := matchResponse(resp, test.Response)
+	respBody, extraction, errors, err := matchResponse(resp, test.Response)
 	if err != nil {
 		return nil, err
 	}
@@ -109,11 +109,11 @@ func (c *ScenarioContext) runTest(client *http.Client, test *config.Test) (*Test
 	c.Context[test.Name] = extraction
 
 	return &TestResult{
-		Request:      req,
-		RequestBody:  reqBody,
-		Response:     resp,
-		ResponseBody: respBody,
-		MatchErrors:  errors,
-		Duration:     duration,
+		Request:            req,
+		RequestBody:        reqBody,
+		Response:           resp,
+		ResponseBody:       respBody,
+		RequestMatchErrors: errors,
+		Duration:           duration,
 	}, nil
 }

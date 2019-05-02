@@ -8,28 +8,28 @@ import (
 	"regexp"
 
 	"github.com/efritz/api-test/config"
-	"github.com/efritz/go-jq"
+	jq "github.com/efritz/go-jq"
 )
 
-type MatchError struct {
+type RequestMatchError struct {
 	Type     string
 	Expected string
 	Actual   string
 }
 
-func matchResponse(resp *http.Response, expected *config.Response) (*http.Response, string, map[string]interface{}, []MatchError, error) {
+func matchResponse(resp *http.Response, expected *config.Response) (string, map[string]interface{}, []RequestMatchError, error) {
 	defer resp.Body.Close()
 
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, "", nil, nil, err
+		return "", nil, nil, err
 	}
 
-	errors := []MatchError{}
+	errors := []RequestMatchError{}
 
 	match, statusGroups := matchRegex(expected.Status, fmt.Sprintf("%d", resp.StatusCode))
 	if !match {
-		errors = append(errors, MatchError{
+		errors = append(errors, RequestMatchError{
 			Type:     "Status Code",
 			Expected: fmt.Sprintf("%s", expected.Status),
 			Actual:   fmt.Sprintf("%d", resp.StatusCode),
@@ -44,7 +44,7 @@ func matchResponse(resp *http.Response, expected *config.Response) (*http.Respon
 
 			match, groups := matchRegex(pattern, value)
 			if !match {
-				errors = append(errors, MatchError{
+				errors = append(errors, RequestMatchError{
 					Type:     fmt.Sprintf("Header '%s'", key),
 					Expected: fmt.Sprintf("%s", pattern),
 					Actual:   value,
@@ -57,7 +57,7 @@ func matchResponse(resp *http.Response, expected *config.Response) (*http.Respon
 
 	match, bodyGroups := matchRegex(expected.Body, string(content))
 	if !match {
-		errors = append(errors, MatchError{
+		errors = append(errors, RequestMatchError{
 			Type:     "body",
 			Expected: fmt.Sprintf("%s", expected.Body),
 			Actual:   "<placeholder>", // string(content),
@@ -74,21 +74,21 @@ func matchResponse(resp *http.Response, expected *config.Response) (*http.Respon
 	if expected.Extract != "" {
 		var payload interface{}
 		if err := json.Unmarshal(content, &payload); err != nil {
-			return nil, "", nil, nil, err
+			return "", nil, nil, err
 		}
 
 		results, err := jq.Run(expected.Extract, payload)
 		if err != nil {
-			return nil, "", nil, nil, err
+			return "", nil, nil, err
 		}
 
 		if len(results) != 1 {
-			return nil, "", nil, nil, fmt.Errorf("extraction expects a single object")
+			return "", nil, nil, fmt.Errorf("extraction expects a single object")
 		}
 
 		resultMap, ok := results[0].(map[string]interface{})
 		if !ok {
-			return nil, "", nil, nil, fmt.Errorf("extraction expects a single object")
+			return "", nil, nil, fmt.Errorf("extraction expects a single object")
 		}
 
 		for k, v := range resultMap {
@@ -96,7 +96,7 @@ func matchResponse(resp *http.Response, expected *config.Response) (*http.Respon
 		}
 	}
 
-	return resp, string(content), context, errors, nil
+	return string(content), context, errors, nil
 }
 
 func matchRegex(re *regexp.Regexp, val string) (bool, []string) {
