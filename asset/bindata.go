@@ -52,13 +52,22 @@ definitions:
       - type: array
         items:
           type: string
+  options:
+    type: object
+    properties:
+      force-sequential:
+        type: string
+    additionalProperties: false
   global-request:
-    base-url:
-      type: string
-    auth:
-      $ref: '#/definitions/auth'
-    headers:
-      $ref: '#/definitions/headers'
+    type: object
+    properties:
+      base-url:
+        type: string
+      auth:
+        $ref: '#/definitions/auth'
+      headers:
+        $ref: '#/definitions/headers'
+    additionalProperties: false
   scenario:
     type: object
     properties:
@@ -142,6 +151,8 @@ definitions:
 
 type: object
 properties:
+  options:
+    $ref: '#/definitions/options'
   global-request:
     $ref: '#/definitions/global-request'
   scenarios:
@@ -163,7 +174,7 @@ func schemaConfigYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/config.yaml", size: 2060, mode: os.FileMode(420), modTime: time.Unix(1556466026, 0)}
+	info := bindataFileInfo{name: "schema/config.yaml", size: 2395, mode: os.FileMode(420), modTime: time.Unix(1556757702, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -241,6 +252,10 @@ definitions:
         type: string
       extract:
         type: string
+      assertions:
+        type: object
+        additionalProperties:
+          type: string
     additionalProperties: false
   headers:
     type: object
@@ -279,7 +294,7 @@ func schemaIncludeYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/include.yaml", size: 1858, mode: os.FileMode(420), modTime: time.Unix(1556466030, 0)}
+	info := bindataFileInfo{name: "schema/include.yaml", size: 1950, mode: os.FileMode(420), modTime: time.Unix(1556757694, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

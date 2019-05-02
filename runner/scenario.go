@@ -11,6 +11,7 @@ type ScenarioContext struct {
 	Scenario *config.Scenario
 	Results  []*TestResult
 	Pending  bool
+	Running  bool
 	Skipped  bool
 	Context  map[string]interface{}
 }

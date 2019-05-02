@@ -14,7 +14,12 @@ type (
 
 	MainConfig struct {
 		*BaseConfig
+		Options       *Options       `json:"options"`
 		GlobalRequest *GlobalRequest `json:"global-request"`
+	}
+
+	Options struct {
+		ForceSequential bool
 	}
 
 	GlobalRequest struct {
@@ -36,4 +41,10 @@ func (c *BaseConfig) Translate(globalRequest *GlobalRequest) ([]*config.Scenario
 	}
 
 	return scenarios, nil
+}
+
+func (o *Options) Translate() (*config.Options, error) {
+	return &config.Options{
+		ForceSequential: o.ForceSequential,
+	}, nil
 }

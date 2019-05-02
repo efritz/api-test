@@ -31,7 +31,10 @@ func (l *Loader) Load(path string) (*config.Config, error) {
 		return nil, fmt.Errorf("failed to load config %s: %s", path, err.Error())
 	}
 
-	payload := &jsonconfig.MainConfig{}
+	payload := &jsonconfig.MainConfig{
+		Options: &jsonconfig.Options{},
+	}
+
 	if err := unmarshal(path, data, "schema/config.yaml", &payload); err != nil {
 		return nil, err
 	}
@@ -61,7 +64,13 @@ func (l *Loader) Load(path string) (*config.Config, error) {
 		return nil, err
 	}
 
+	options, err := payload.Options.Translate()
+	if err != nil {
+		return nil, err
+	}
+
 	config := &config.Config{
+		Options:   options,
 		Scenarios: flattenedMap,
 	}
 

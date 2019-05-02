@@ -7,13 +7,22 @@ definitions:
       - type: array
         items:
           type: string
+  options:
+    type: object
+    properties:
+      force-sequential:
+        type: string
+    additionalProperties: false
   global-request:
-    base-url:
-      type: string
-    auth:
-      $ref: '#/definitions/auth'
-    headers:
-      $ref: '#/definitions/headers'
+    type: object
+    properties:
+      base-url:
+        type: string
+      auth:
+        $ref: '#/definitions/auth'
+      headers:
+        $ref: '#/definitions/headers'
+    additionalProperties: false
   scenario:
     type: object
     properties:
@@ -97,6 +106,8 @@ definitions:
 
 type: object
 properties:
+  options:
+    $ref: '#/definitions/options'
   global-request:
     $ref: '#/definitions/global-request'
   scenarios:

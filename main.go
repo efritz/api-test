@@ -15,6 +15,7 @@ type Options struct {
 	ConfigPath      string
 	Verbose         bool
 	JUnitReportPath string
+	ForceSequential bool
 }
 
 const Version = "0.1.0"
@@ -29,6 +30,7 @@ func main() {
 	app.Flag("config", "The path to the config file.").Short('f').StringVar(&opts.ConfigPath)
 	app.Flag("verbose", "Output debug logs.").Short('v').Default("false").BoolVar(&opts.Verbose)
 	app.Flag("junit", "The path to write a JUnit XML report.").Short('j').StringVar(&opts.JUnitReportPath)
+	app.Flag("force-sequential", "Disable parallel execution.").Default("false").BoolVar(&opts.ForceSequential)
 
 	if _, err := app.Parse(os.Args[1:]); err != nil {
 		fmt.Printf("error: %s\n", err.Error())
@@ -46,7 +48,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	runner := runner.NewRunner(config, logger, opts.JUnitReportPath)
+	if opts.ForceSequential {
+		// TODO - temporary hack until overrides
+		config.Options.ForceSequential = true
+	}
+
+	runner := runner.NewRunner(
+		config,
+		logger,
+		opts.JUnitReportPath,
+	)
 
 	if err := runner.Run(); err != nil {
 		logger.Error("error: %s", err.Error())

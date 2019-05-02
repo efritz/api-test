@@ -23,6 +23,7 @@ type Runner struct {
 	names           []string
 	contexts        map[string]*ScenarioContext
 	halt            chan struct{}
+	sequenceMutex   sync.Mutex
 	wg              sync.WaitGroup
 }
 
@@ -141,12 +142,19 @@ func (r *Runner) submitReady() {
 func (r *Runner) submit(context *ScenarioContext) {
 	defer r.wg.Done()
 
+	if r.config.Options.ForceSequential {
+		r.sequenceMutex.Lock()
+		defer r.sequenceMutex.Unlock()
+	}
+
+	context.Running = true
 	r.prepareContext(context)
 
 	for result := range context.Run(r.client) {
 		context.Results = append(context.Results, result)
 	}
 
+	context.Running = false
 	r.submitReady()
 }
 
