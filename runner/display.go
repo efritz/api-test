@@ -88,7 +88,7 @@ func displaySummary(
 
 	if numFailures == 0 {
 		logger.Info(
-			"Ran %d scenarios and %d tests in %s (%s on the wall)",
+			"\nRan %d scenarios and %d tests in %s (%s on the wall)",
 			numScenarios,
 			numTests,
 			formatSeconds(totalDuration),
@@ -99,7 +99,7 @@ func displaySummary(
 	}
 
 	logger.Error(
-		"Failed %d out of %d ran",
+		"\nFailed %d out of %d ran\n",
 		numFailures,
 		numScenarios,
 	)
@@ -110,17 +110,18 @@ func displaySummary(
 		}
 
 		if lastResult := context.LastResult(); lastResult != nil {
-			displayFailure(context.LastTest(), lastResult, logger)
+			displayFailure(context.Scenario, context.LastTest(), lastResult, logger)
 		}
 	}
 }
 
 func displayFailure(
+	scenario *config.Scenario,
 	test *config.Test,
 	result *TestResult,
 	logger logging.Logger,
 ) {
-	logger.Error("%s: ", test.Name)
+	logger.Error("%s/%s: ", scenario.Name, test.Name)
 
 	if result.Err != nil {
 		logger.Error("Failed to perform request: %s", result.Err.Error())
@@ -143,8 +144,8 @@ func displayFailure(
 }
 
 func getStatus(context *ScenarioContext) *pentimento.AnimatedString {
-	if context.Pending {
-		return pendingStatus
+	if context.Running {
+		return runningStatus
 	}
 
 	if context.Skipped {
@@ -165,7 +166,7 @@ func getStatus(context *ScenarioContext) *pentimento.AnimatedString {
 		}
 	}
 
-	return runningStatus
+	return pendingStatus
 }
 
 func formatMilliseconds(duration time.Duration) string {
