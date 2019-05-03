@@ -37,7 +37,7 @@ func (c *Request) Translate(globalRequest *GlobalRequest) (*config.Request, erro
 
 	urlTemplate, err := compile(url)
 	if err != nil {
-		return nil, fmt.Errorf("illegal uri template")
+		return nil, fmt.Errorf("illegal uri template (%s)", err.Error())
 	}
 
 	headerTemplates := map[string][]*tmpl.Template{}
@@ -46,7 +46,7 @@ func (c *Request) Translate(globalRequest *GlobalRequest) (*config.Request, erro
 		for _, value := range values {
 			template, err := compile(value)
 			if err != nil {
-				return nil, fmt.Errorf("illegal header template")
+				return nil, fmt.Errorf("illegal header template (%s)", err.Error())
 			}
 
 			templates = append(templates, template)
@@ -69,14 +69,14 @@ func (c *Request) Translate(globalRequest *GlobalRequest) (*config.Request, erro
 	if c.Body != "" {
 		bodyTemplate, err = compile(c.Body)
 		if err != nil {
-			return nil, fmt.Errorf("illegal body template")
+			return nil, fmt.Errorf("illegal body template (%s)", err.Error())
 		}
 	}
 
 	if c.JSONBody != nil {
 		bodyTemplate, err = compile(string(c.JSONBody))
 		if err != nil {
-			return nil, fmt.Errorf("illegal json body template")
+			return nil, fmt.Errorf("illegal json body template (%s)", err.Error())
 		}
 	}
 
