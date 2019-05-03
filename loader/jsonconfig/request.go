@@ -3,11 +3,13 @@ package jsonconfig
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	tmpl "text/template"
 
 	"github.com/efritz/api-test/config"
 	"github.com/efritz/api-test/loader/util"
+	"github.com/google/uuid"
 )
 
 type (
@@ -149,5 +151,18 @@ func isRelative(uri string) bool {
 }
 
 func compile(template string) (*tmpl.Template, error) {
-	return tmpl.New("").Parse(template)
+	funcs := tmpl.FuncMap{
+		"uuid": func() string { return uuid.New().String() },
+		"file": func(path string) string {
+			content, err := ioutil.ReadFile(path)
+			if err != nil {
+				// TODO - ?
+				return "<failed to read file>"
+			}
+
+			return string(content)
+		},
+	}
+
+	return tmpl.New("").Funcs(funcs).Parse(template)
 }

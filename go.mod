@@ -11,6 +11,7 @@ require (
 	github.com/efritz/pentimento v0.0.0-20190429011147-ade47d831101
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.3.1 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/mattn/go-isatty v0.0.7 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/onsi/ginkgo v1.8.0 // indirect
