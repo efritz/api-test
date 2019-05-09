@@ -10,22 +10,22 @@ import (
 )
 
 type Response struct {
-	Status  json.RawMessage            `json:"status"`
-	Headers map[string]json.RawMessage `json:"headers"`
-	Body    string                     `json:"body"`
-	Extract string                     `json:"extract"`
+	Status     json.RawMessage            `json:"status"`
+	Headers    map[string]json.RawMessage `json:"headers"`
+	Body       string                     `json:"body"`
+	Extract    string                     `json:"extract"`
 }
 
 var patternOK = regexp.MustCompile("2..")
 
-func (c *Response) Translate() (*config.Response, error) {
-	status, err := unmarshalStatus(c.Status)
+func (r *Response) Translate() (*config.Response, error) {
+	status, err := unmarshalStatus(r.Status)
 	if err != nil {
 		return nil, err
 	}
 
 	headers := map[string][]*regexp.Regexp{}
-	for name, raw := range c.Headers {
+	for name, raw := range r.Headers {
 		values, err := util.UnmarshalStringList(raw)
 		if err != nil {
 			return nil, err
@@ -44,16 +44,16 @@ func (c *Response) Translate() (*config.Response, error) {
 		headers[name] = patterns
 	}
 
-	body, err := regexp.Compile(c.Body)
+	body, err := regexp.Compile(r.Body)
 	if err != nil {
 		return nil, fmt.Errorf("illegal body regex")
 	}
 
 	return &config.Response{
-		Status:  status,
-		Headers: headers,
-		Body:    body,
-		Extract: c.Extract,
+		Status:     status,
+		Headers:    headers,
+		Body:       body,
+		Extract:    r.Extract,
 	}, nil
 }
 

@@ -1,0 +1,47 @@
+global-request:
+  base-url: http://test.io
+  auth:
+    username: admin
+    password: secret
+
+scenarios:
+  - name: s1
+    tests:
+      - name: t1
+        request:
+          uri: /t1
+          method: post
+      - name: t2
+        request:
+          uri: /t2
+      - name: t3
+        request:
+          uri: /t3
+  - name: s2
+    dependencies:
+      - s1
+    tests:
+      - name: t1
+        request:
+          uri: /t1
+          method: post
+      - name: t2
+        request:
+          uri: /t2
+      - name: t3
+        enabled: false
+        request:
+          uri: /t3
+  - name: s3
+    parallel: true
+    tests:
+      - name: t1
+        request:
+          uri: /t1
+          method: post
+      - name: t2
+        request:
+          uri: /t2
+      - name: t3
+        request:
+          uri: /t3

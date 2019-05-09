@@ -12,25 +12,22 @@ import (
 	"github.com/google/uuid"
 )
 
-type (
-	Request struct {
-		URI      string                     `json:"uri"`
-		Method   string                     `json:"method"`
-		Auth     *BasicAuth                 `json:"auth"`
-		Headers  map[string]json.RawMessage `json:"headers"`
-		Body     string                     `json:"body"`
-		JSONBody json.RawMessage            `json:"json-body"`
-		// TODO - templated JSON body
-		// TODO - form
-		// TODO - file
-	}
-)
+type Request struct {
+	URI      string                     `json:"uri"`
+	Method   string                     `json:"method"`
+	Auth     *BasicAuth                 `json:"auth"`
+	Headers  map[string]json.RawMessage `json:"headers"`
+	Body     string                     `json:"body"`
+	JSONBody json.RawMessage            `json:"json-body"` // TODO - this quotes in a way that is bad
+	// TODO - form
+	// TODO - file
+}
 
-func (c *Request) Translate(globalRequest *GlobalRequest) (*config.Request, error) {
-	method := sanitizeMethod(c.Method)
-	url := sanitizeURL(c.URI, globalRequest)
-	jsonAuth := sanitizeAuth(c.Auth, globalRequest)
-	headers, err := sanitizeHeaders(c.Headers, globalRequest)
+func (r *Request) Translate(globalRequest *GlobalRequest) (*config.Request, error) {
+	method := sanitizeMethod(r.Method)
+	url := sanitizeURL(r.URI, globalRequest)
+	jsonAuth := sanitizeAuth(r.Auth, globalRequest)
+	headers, err := sanitizeHeaders(r.Headers, globalRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -60,21 +57,21 @@ func (c *Request) Translate(globalRequest *GlobalRequest) (*config.Request, erro
 		return nil, err
 	}
 
-	if c.Body != "" && c.JSONBody != nil {
+	if r.Body != "" && r.JSONBody != nil {
 		return nil, fmt.Errorf("multiple bodies supplied")
 	}
 
 	var bodyTemplate *tmpl.Template
 
-	if c.Body != "" {
-		bodyTemplate, err = compile(c.Body)
+	if r.Body != "" {
+		bodyTemplate, err = compile(r.Body)
 		if err != nil {
 			return nil, fmt.Errorf("illegal body template (%s)", err.Error())
 		}
 	}
 
-	if c.JSONBody != nil {
-		bodyTemplate, err = compile(string(c.JSONBody))
+	if r.JSONBody != nil {
+		bodyTemplate, err = compile(string(r.JSONBody))
 		if err != nil {
 			return nil, fmt.Errorf("illegal json body template (%s)", err.Error())
 		}
@@ -123,6 +120,7 @@ func sanitizeHeaders(rawHeaders map[string]json.RawMessage, globalRequest *Globa
 				return nil, err
 			}
 
+			// TODO - test merge
 			if _, ok := headers[name]; !ok {
 				headers[name] = values
 			}
@@ -152,11 +150,12 @@ func isRelative(uri string) bool {
 
 func compile(template string) (*tmpl.Template, error) {
 	funcs := tmpl.FuncMap{
+		// TODO - test functions
 		"uuid": func() string { return uuid.New().String() },
 		"file": func(path string) string {
 			content, err := ioutil.ReadFile(path)
 			if err != nil {
-				// TODO - ?
+				// TODO - some error?
 				return "<failed to read file>"
 			}
 

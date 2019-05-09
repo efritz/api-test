@@ -1,0 +1,10 @@
+scenarios:
+  - name: s1
+    dependencies: s3
+    tests: []
+  - name: s2
+    dependencies: s1
+    tests: []
+  - name: s3
+    dependencies: s2
+    tests: []

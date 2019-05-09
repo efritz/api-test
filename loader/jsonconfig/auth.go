@@ -7,13 +7,13 @@ type BasicAuth struct {
 	Password string `json:"password"`
 }
 
-func (c *BasicAuth) Translate() (*config.BasicAuth, error) {
-	if c == nil {
+func (a *BasicAuth) Translate() (*config.BasicAuth, error) {
+	if a == nil {
 		return nil, nil
 	}
 
 	return &config.BasicAuth{
-		Username: c.Username, // TODO - should compile
-		Password: c.Password,
+		Username: a.Username, // TODO - should compile
+		Password: a.Password,
 	}, nil
 }

@@ -1,0 +1,25 @@
+scenarios:
+  - name: s1
+    tests:
+      - name: t1
+        request:
+          uri: /t1
+      - name: t2
+        request:
+          uri: /t2
+  - name: s2
+    tests:
+      - name: t1
+        request:
+          uri: /t1
+      - name: t2
+        request:
+          uri: /t2
+  - name: s3
+    tests:
+      - name: t1
+        request:
+          uri: /t1
+      - name: t1
+        request:
+          uri: /t1

@@ -9,40 +9,47 @@ import (
 
 type Test struct {
 	Name     string    `json:"name"`
+	Enabled  *bool     `json:"enabled"`
 	Request  *Request  `json:"request"`
 	Response *Response `json:"response"`
 }
 
-func (c *Test) Translate(globalRequest *GlobalRequest) (*config.Test, error) {
-	if c.Request == nil {
-		c.Request = &Request{}
+func (t *Test) Translate(globalRequest *GlobalRequest) (*config.Test, error) {
+	if t.Request == nil {
+		t.Request = &Request{}
 	}
 
-	request, err := c.Request.Translate(globalRequest)
+	request, err := t.Request.Translate(globalRequest)
 	if err != nil {
 		return nil, err
 	}
 
-	if c.Response == nil {
-		c.Response = &Response{}
+	if t.Response == nil {
+		t.Response = &Response{}
 	}
 
-	response, err := c.Response.Translate()
+	response, err := t.Response.Translate()
 	if err != nil {
 		return nil, err
 	}
 
-	name := c.Name
+	name := t.Name
 	if name == "" {
 		name = fmt.Sprintf(
 			"%s %s",
 			strings.ToUpper(request.Method),
-			c.Request.URI,
+			t.Request.URI,
 		)
+	}
+
+	enabled := true
+	if t.Enabled != nil {
+		enabled = *t.Enabled
 	}
 
 	return &config.Test{
 		Name:     name,
+		Enabled:  enabled,
 		Request:  request,
 		Response: response,
 	}, nil

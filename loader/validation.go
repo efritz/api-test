@@ -19,6 +19,8 @@ func validateScenarios(scenarioMap map[string][]*config.Scenario) (map[string]*c
 		}
 	}
 
+	// TODO - same for tests
+
 	for name, scenario := range flattened {
 		for _, dependency := range scenario.Dependencies {
 			if _, ok := flattened[dependency]; !ok {
@@ -27,11 +29,29 @@ func validateScenarios(scenarioMap map[string][]*config.Scenario) (map[string]*c
 		}
 	}
 
+	if err := validateTests(flattened); err != nil {
+		return nil, err
+	}
+
 	if err := checkCycles(flattened); err != nil {
 		return nil, err
 	}
 
 	return flattened, nil
+}
+
+func validateTests(scenarios map[string]*config.Scenario) error {
+	for name, scenario := range scenarios {
+		flattened := map[string]struct{}{}
+		for _, test := range scenario.Tests {
+			if _, ok := flattened[test.Name]; ok {
+				return fmt.Errorf("test '%s/%s' defined more than once", name, test.Name)
+			}
+
+			flattened[test.Name] = struct{}{}
+		}
+	}
+	return nil
 }
 
 func checkCycles(scenarios map[string]*config.Scenario) error {

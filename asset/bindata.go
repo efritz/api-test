@@ -73,8 +73,12 @@ definitions:
     properties:
       name:
         type: string
+      enabled:
+        type: boolean
       dependencies:
         $ref: '#/definitions/stringOrList'
+      parallel:
+        type: boolean
       tests:
         type: array
         items:
@@ -88,6 +92,8 @@ definitions:
     properties:
       name:
         type: string
+      enabled:
+        type: boolean
       request:
         $ref: '#/definitions/request'
       response:
@@ -174,7 +180,7 @@ func schemaConfigYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/config.yaml", size: 2395, mode: os.FileMode(420), modTime: time.Unix(1556757702, 0)}
+	info := bindataFileInfo{name: "schema/config.yaml", size: 2507, mode: os.FileMode(420), modTime: time.Unix(1557155792, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -193,8 +199,12 @@ definitions:
     properties:
       name:
         type: string
+      enabled:
+        type: boolean
       dependencies:
         $ref: '#/definitions/stringOrList'
+      parallel:
+        type: boolean
       tests:
         type: array
         items:
@@ -208,6 +218,8 @@ definitions:
     properties:
       name:
         type: string
+      enabled:
+        type: boolean
       request:
         $ref: '#/definitions/request'
       response:
@@ -294,7 +306,7 @@ func schemaIncludeYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/include.yaml", size: 1950, mode: os.FileMode(420), modTime: time.Unix(1556757694, 0)}
+	info := bindataFileInfo{name: "schema/include.yaml", size: 2062, mode: os.FileMode(420), modTime: time.Unix(1557155797, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

@@ -12,8 +12,12 @@ definitions:
     properties:
       name:
         type: string
+      enabled:
+        type: boolean
       dependencies:
         $ref: '#/definitions/stringOrList'
+      parallel:
+        type: boolean
       tests:
         type: array
         items:
@@ -27,6 +31,8 @@ definitions:
     properties:
       name:
         type: string
+      enabled:
+        type: boolean
       request:
         $ref: '#/definitions/request'
       response:

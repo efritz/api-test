@@ -1,0 +1,4 @@
+scenarios:
+  - name: t1
+    tests: []
+    tasks: true

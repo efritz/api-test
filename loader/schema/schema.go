@@ -21,8 +21,6 @@ func Validate(name string, data []byte) error {
 
 	if !result.Valid() {
 		for _, err := range result.Errors() {
-			fmt.Printf("Error: %#v\n", err)
-
 			resultError, ok := err.(gojsonschema.ResultError)
 			if !ok {
 				continue
