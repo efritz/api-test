@@ -39,7 +39,7 @@ func NewRunner(config *config.Config, logger logging.Logger, junitReportPath str
 
 	for name, scenario := range config.Scenarios {
 		names = append(names, name)
-		contexts[name] = NewScenarioContext(scenario)
+		contexts[name] = NewScenarioContext(scenario, config.Options.ForceSequential)
 	}
 
 	sort.Strings(names)
@@ -102,15 +102,23 @@ func (r *Runner) submitReady() {
 	skipped := false
 
 	for _, context := range r.contexts {
-		if !context.Pending {
+		if context.Scenario.Disabled || !context.Pending {
 			continue
 		}
 
 		shouldSkip := false
 		shouldSubmit := true
 
+		if !context.Scenario.Enabled {
+			shouldSkip = true
+		}
+
 		for _, dependency := range context.Scenario.Dependencies {
-			if r.contexts[dependency].Skipped || r.contexts[dependency].Failed() {
+			if r.contexts[dependency].Skipped {
+				shouldSkip = true
+			}
+
+			if r.contexts[dependency].Errored() || r.contexts[dependency].Failed() {
 				shouldSkip = true
 			}
 
@@ -151,7 +159,13 @@ func (r *Runner) submit(context *ScenarioContext) {
 	r.prepareContext(context)
 
 	for result := range context.Run(r.client) {
-		context.Results = append(context.Results, result)
+		for len(context.Results) <= result.Index {
+			context.Results = append(context.Results, nil)
+		}
+
+		if !result.Disabled {
+			context.Results[result.Index] = result
+		}
 	}
 
 	context.Running = false

@@ -31,18 +31,30 @@ func displayProgress(
 	for _, name := range names {
 		context := contexts[name]
 
+		if context.Scenario.Disabled {
+			continue
+		}
+
 		details := ""
-		if !context.Pending && !context.Skipped && !context.Resolved() && !context.Failed() {
-			details = fmt.Sprintf(
-				"(%d/%d)",
-				len(context.Results)+1,
-				len(context.Scenario.Tests),
-			)
+		for _, result := range context.Results {
+			if result == nil {
+				continue
+			}
+
+			if result.Errored() {
+				details += logging.Colorize("E", logging.LevelError)
+			} else if result.Failed() {
+				details += logging.Colorize("F", logging.LevelError)
+			} else if result.Skipped {
+				details += logging.Colorize("S", logging.LevelWarn)
+			} else {
+				details += logging.Colorize(".", logging.LevelInfo)
+			}
 		}
 
 		if context.Resolved() {
-			details = fmt.Sprintf(
-				"finished in %s",
+			details += fmt.Sprintf(
+				" (in %s)",
 				formatMilliseconds(context.Duration()),
 			)
 		}
@@ -71,24 +83,54 @@ func displaySummary(
 	}
 
 	numScenarios := 0
+	numScenariosSkipped := 0
 	numTests := 0
+	numTestsSkipped := 0
 	numFailures := 0
 
 	for _, context := range contexts {
+		if context.Scenario.Disabled {
+			continue
+		}
+
+		if context.Skipped {
+			numScenariosSkipped++
+		}
+
 		if !context.Skipped {
 			numScenarios++
 		}
 
-		numTests += len(context.Results)
+		for _, result := range context.Results {
+			if result == nil {
+				continue
+			}
 
-		if context.Failed() {
+			if !result.Skipped {
+				numTests++
+			} else {
+				numTestsSkipped++
+			}
+		}
+
+		if context.Errored() || context.Failed() {
 			numFailures++
 		}
 	}
 
+	logger.Info("")
+
+	if numScenariosSkipped > 0 || numTestsSkipped > 0 {
+		logger.Warn(
+			"Skipped %d scenarios and %d tests",
+			numScenariosSkipped,
+			numTestsSkipped,
+		)
+	}
+
 	if numFailures == 0 {
 		logger.Info(
-			"\nRan %d scenarios and %d tests in %s (%s on the wall)",
+			"Ran %d scenarios and %d tests in %s (%s on the wall)",
 			numScenarios,
 			numTests,
 			formatSeconds(totalDuration),
@@ -99,18 +141,23 @@ func displaySummary(
 	}
 
 	logger.Error(
-		"\nFailed %d out of %d ran\n",
+		"Failed %d out of %d ran\n",
 		numFailures,
 		numScenarios,
 	)
 
 	for _, context := range contexts {
-		if !context.Failed() {
-			continue
-		}
+		for i, result := range context.Results {
+			if result == nil || (!result.Errored() && !result.Failed()) {
+				continue
+			}
 
-		if lastResult := context.LastResult(); lastResult != nil {
-			displayFailure(context.Scenario, context.LastTest(), lastResult, logger)
+			displayFailure(
+				context.Scenario,
+				context.Scenario.Tests[i],
+				result,
+				logger,
+			)
 		}
 	}
 }
@@ -152,18 +199,16 @@ func getStatus(context *ScenarioContext) *pentimento.AnimatedString {
 		return skippedStatus
 	}
 
-	if lastResult := context.LastResult(); lastResult != nil {
-		if context.Resolved() {
-			return passStatus
-		}
+	if context.Resolved() {
+		return passStatus
+	}
 
-		if len(lastResult.RequestMatchErrors) > 0 {
-			return failedStatus
-		}
+	if context.Errored() {
+		return errorStatus
+	}
 
-		if lastResult.Err != nil {
-			return errorStatus
-		}
+	if context.Failed() {
+		return failedStatus
 	}
 
 	return pendingStatus

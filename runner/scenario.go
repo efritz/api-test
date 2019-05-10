@@ -2,63 +2,116 @@ package runner
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/efritz/api-test/config"
 )
 
 type ScenarioContext struct {
-	Scenario *config.Scenario
-	Results  []*TestResult
-	Pending  bool
-	Running  bool
-	Skipped  bool
-	Context  map[string]interface{}
+	Scenario        *config.Scenario
+	Results         []*TestResult
+	Pending         bool
+	Running         bool
+	Skipped         bool
+	Context         map[string]interface{}
+	forceSequential bool
 }
 
-func NewScenarioContext(scenario *config.Scenario) *ScenarioContext {
+func NewScenarioContext(scenario *config.Scenario, forceSequential bool) *ScenarioContext {
 	return &ScenarioContext{
-		Scenario: scenario,
-		Results:  []*TestResult{},
-		Pending:  true,
+		Scenario:        scenario,
+		Results:         []*TestResult{},
+		Pending:         true,
+		forceSequential: forceSequential,
 	}
 }
 
 func (c *ScenarioContext) Duration() time.Duration {
 	duration := time.Duration(0)
 	for _, result := range c.Results {
-		duration += result.Duration
+		if result != nil {
+			duration += result.Duration
+		}
 	}
 
 	return duration
 }
 
 func (c *ScenarioContext) Resolved() bool {
-	return len(c.Results) == len(c.Scenario.Tests) && !c.Failed()
+	if !c.finished() {
+		return false
+	}
+
+	for _, result := range c.Results {
+		if result != nil && (result.Errored() || result.Failed()) {
+			return false
+		}
+	}
+
+	return true
 }
 
-func (c *ScenarioContext) Failed() bool {
-	if result := c.LastResult(); result != nil {
-		return result.Failed()
+func (c *ScenarioContext) Errored() bool {
+	if !c.finished() {
+		return false
+	}
+
+	for _, result := range c.Results {
+		if result != nil && result.Errored() {
+			return true
+		}
 	}
 
 	return false
 }
 
-func (c *ScenarioContext) LastResult() *TestResult {
-	if len(c.Results) == 0 {
-		return nil
+func (c *ScenarioContext) Failed() bool {
+	if !c.finished() {
+		return false
 	}
 
-	return c.Results[len(c.Results)-1]
+	for _, result := range c.Results {
+		if result != nil && result.Failed() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *ScenarioContext) finished() bool {
+	if len(c.Scenario.Tests) != len(c.Results) {
+		return false
+	}
+
+	for i, result := range c.Results {
+		if result == nil && !c.Scenario.Tests[i].Disabled {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (c *ScenarioContext) LastResult() *TestResult {
+	for i := len(c.Results) - 1; i >= 0; i-- {
+		if c.Results[i] != nil {
+			return c.Results[i]
+		}
+	}
+
+	return nil
 }
 
 func (c *ScenarioContext) LastTest() *config.Test {
-	if len(c.Results) == 0 {
-		return nil
+	for i := len(c.Results) - 1; i >= 0; i-- {
+		if c.Results[i] != nil {
+			return c.Scenario.Tests[i]
+		}
 	}
 
-	return c.Scenario.Tests[len(c.Results)-1]
+	return nil
 }
 
 func (c *ScenarioContext) Run(client *http.Client) <-chan *TestResult {
@@ -67,11 +120,54 @@ func (c *ScenarioContext) Run(client *http.Client) <-chan *TestResult {
 	go func() {
 		defer close(ch)
 
-		for _, test := range c.Scenario.Tests {
-			result, err := c.runTest(client, test)
+		wg := sync.WaitGroup{}
+		defer wg.Wait()
+
+		for i, test := range c.Scenario.Tests {
+			if test.Disabled {
+				result := &TestResult{
+					Index:    i,
+					Disabled: true,
+				}
+
+				ch <- result
+				continue
+			}
+
+			if !test.Enabled {
+				result := &TestResult{
+					Index:   i,
+					Skipped: true,
+				}
+
+				ch <- result
+				continue
+			}
+
+			if c.Scenario.Parallel && !c.forceSequential {
+				wg.Add(1)
+				go func(index int) {
+					defer wg.Done()
+
+					result, err := c.runTest(client, index, test)
+					if err != nil {
+						result = &TestResult{
+							Index: i,
+							Err:   err,
+						}
+					}
+
+					ch <- result
+				}(i)
+
+				continue
+			}
+
+			result, err := c.runTest(client, i, test)
 			if err != nil {
 				result = &TestResult{
-					Err: err,
+					Index: i,
+					Err:   err,
 				}
 			}
 
@@ -86,7 +182,7 @@ func (c *ScenarioContext) Run(client *http.Client) <-chan *TestResult {
 	return ch
 }
 
-func (c *ScenarioContext) runTest(client *http.Client, test *config.Test) (*TestResult, error) {
+func (c *ScenarioContext) runTest(client *http.Client, index int, test *config.Test) (*TestResult, error) {
 	started := time.Now()
 
 	req, reqBody, err := buildRequest(test.Request, c.Context)
@@ -109,6 +205,7 @@ func (c *ScenarioContext) runTest(client *http.Client, test *config.Test) (*Test
 	c.Context[test.Name] = extraction
 
 	return &TestResult{
+		Index:              index,
 		Request:            req,
 		RequestBody:        reqBody,
 		Response:           resp,

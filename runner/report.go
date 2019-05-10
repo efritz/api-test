@@ -55,7 +55,7 @@ func formatJUnitReport(contexts map[string]*ScenarioContext) ([]byte, error) {
 			if i < len(context.Results) {
 				testCase.Time = fmt.Sprintf("%.3f", float64(context.Results[i].Duration)/float64(time.Second))
 
-				if context.Results[i].Failed() {
+				if context.Results[i].Errored() || context.Results[i].Failed() {
 					testCase.Failure = &JUnitFailure{
 						Message:  "Failed",
 						Type:     "",
@@ -71,7 +71,7 @@ func formatJUnitReport(contexts map[string]*ScenarioContext) ([]byte, error) {
 
 		failures := 0
 		for _, result := range context.Results {
-			if result.Failed() {
+			if result.Errored() || result.Failed() {
 				failures++
 			}
 		}

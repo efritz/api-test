@@ -6,6 +6,9 @@ import (
 )
 
 type TestResult struct {
+	Index              int
+	Disabled           bool
+	Skipped            bool
 	Request            *http.Request
 	RequestBody        string
 	Response           *http.Response
@@ -15,6 +18,10 @@ type TestResult struct {
 	Duration           time.Duration
 }
 
+func (r *TestResult) Errored() bool {
+	return r.Err != nil
+}
+
 func (r *TestResult) Failed() bool {
-	return r.Err != nil || len(r.RequestMatchErrors) > 0
+	return len(r.RequestMatchErrors) > 0
 }
