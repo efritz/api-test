@@ -11,7 +11,7 @@ definitions:
     type: object
     properties:
       force-sequential:
-        type: string
+        type: boolean
     additionalProperties: false
   global-request:
     type: object
@@ -93,6 +93,10 @@ definitions:
         type: string
       extract:
         type: string
+      assertions:
+        type: object
+        additionalProperties:
+          type: string
     additionalProperties: false
   headers:
     type: object

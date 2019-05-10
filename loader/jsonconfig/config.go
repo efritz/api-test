@@ -19,7 +19,7 @@ type (
 	}
 
 	Options struct {
-		ForceSequential bool
+		ForceSequential bool `json:"force-sequential"`
 	}
 
 	GlobalRequest struct {

@@ -24,8 +24,6 @@ func NewLoader() *Loader {
 }
 
 func (l *Loader) Load(path string) (*config.Config, error) {
-	path = normalizePath(path, "")
-
 	data, err := readPath(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config %s: %s", path, err.Error())
@@ -75,6 +73,23 @@ func (l *Loader) Load(path string) (*config.Config, error) {
 	}
 
 	return config, nil
+}
+
+func (l *Loader) LoadOverride(path string) (*config.Override, error) {
+	data, err := readPath(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load override %s: %s", path, err.Error())
+	}
+
+	payload := &jsonconfig.Override{
+		Options: &jsonconfig.Options{},
+	}
+
+	if err := unmarshal(path, data, "schema/override.yaml", &payload); err != nil {
+		return nil, err
+	}
+
+	return payload.Translate()
 }
 
 func (l *Loader) loadIncludes(
@@ -136,6 +151,44 @@ func (l *Loader) loadInclude(
 }
 
 //
+// Command Line
+
+func Load(path string, override *config.Override) (*config.Config, error) {
+	overridePath, err := GetOverridePath()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to determine override path: %s",
+			err.Error(),
+		)
+	}
+
+	loader := NewLoader()
+
+	config, err := loader.Load(normalizePath(path, ""))
+	if err != nil {
+		return nil, err
+	}
+
+	if overridePath != "" {
+		localOverride, err := loader.LoadOverride(overridePath)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to apply override: %s",
+				err.Error(),
+			)
+		}
+
+		config.ApplyOverride(localOverride)
+	}
+
+	if override != nil {
+		config.ApplyOverride(override)
+	}
+
+	return config, nil
+}
+
+//
 // Helpers
 
 func normalizePath(path, source string) string {
@@ -158,7 +211,7 @@ func readPath(path string) ([]byte, error) {
 func unmarshal(path string, data []byte, schemaName string, payload interface{}) error {
 	if err := schema.Validate(schemaName, data); err != nil {
 		return fmt.Errorf(
-			"failed to validate config %s: %s",
+			"failed to validate input %s: %s",
 			path,
 			err.Error(),
 		)

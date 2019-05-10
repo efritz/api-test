@@ -1,0 +1,15 @@
+---
+
+definitions:
+  options:
+    type: object
+    properties:
+      force-sequential:
+        type: boolean
+    additionalProperties: false
+
+type: object
+properties:
+  options:
+    $ref: '#/definitions/options'
+additionalProperties: false

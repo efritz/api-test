@@ -8,13 +8,23 @@ import (
 type (
 	Config struct {
 		Scenarios map[string]*Scenario
-		Options   *Options `json:"options,omitempty"`
+		Options   *Options
 	}
 
 	Options struct {
 		ForceSequential bool
 	}
+
+	Override struct {
+		Options *Options
+	}
 )
+
+func (c *Config) ApplyOverride(override *Override) {
+	if override != nil && override.Options.ForceSequential {
+		c.Options.ForceSequential = true
+	}
+}
 
 func (c *Config) EnableTests(tests []string) error {
 	if len(tests) == 0 {

@@ -77,6 +77,10 @@ definitions:
         type: string
       extract:
         type: string
+      assertions:
+        type: object
+        additionalProperties:
+          type: string
     additionalProperties: false
   headers:
     type: object

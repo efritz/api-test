@@ -2,6 +2,7 @@
 // sources:
 // schema/config.yaml
 // schema/include.yaml
+// schema/override.yaml
 package asset
 
 import (
@@ -56,7 +57,7 @@ definitions:
     type: object
     properties:
       force-sequential:
-        type: string
+        type: boolean
     additionalProperties: false
   global-request:
     type: object
@@ -138,6 +139,10 @@ definitions:
         type: string
       extract:
         type: string
+      assertions:
+        type: object
+        additionalProperties:
+          type: string
     additionalProperties: false
   headers:
     type: object
@@ -180,7 +185,7 @@ func schemaConfigYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/config.yaml", size: 2507, mode: os.FileMode(420), modTime: time.Unix(1557155792, 0)}
+	info := bindataFileInfo{name: "schema/config.yaml", size: 2508, mode: os.FileMode(420), modTime: time.Unix(1557502629, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -311,6 +316,38 @@ func schemaIncludeYaml() (*asset, error) {
 	return a, nil
 }
 
+var _schemaOverrideYaml = []byte(`---
+
+definitions:
+  options:
+    type: object
+    properties:
+      force-sequential:
+        type: boolean
+    additionalProperties: false
+
+type: object
+properties:
+  options:
+    $ref: '#/definitions/options'
+additionalProperties: false
+`)
+
+func schemaOverrideYamlBytes() ([]byte, error) {
+	return _schemaOverrideYaml, nil
+}
+
+func schemaOverrideYaml() (*asset, error) {
+	bytes, err := schemaOverrideYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "schema/override.yaml", size: 239, mode: os.FileMode(420), modTime: time.Unix(1557502622, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -363,8 +400,9 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"schema/config.yaml":  schemaConfigYaml,
-	"schema/include.yaml": schemaIncludeYaml,
+	"schema/config.yaml":   schemaConfigYaml,
+	"schema/include.yaml":  schemaIncludeYaml,
+	"schema/override.yaml": schemaOverrideYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -409,8 +447,9 @@ type bintree struct {
 
 var _bintree = &bintree{nil, map[string]*bintree{
 	"schema": &bintree{nil, map[string]*bintree{
-		"config.yaml":  &bintree{schemaConfigYaml, map[string]*bintree{}},
-		"include.yaml": &bintree{schemaIncludeYaml, map[string]*bintree{}},
+		"config.yaml":   &bintree{schemaConfigYaml, map[string]*bintree{}},
+		"include.yaml":  &bintree{schemaIncludeYaml, map[string]*bintree{}},
+		"override.yaml": &bintree{schemaOverrideYaml, map[string]*bintree{}},
 	}},
 }}
 
