@@ -1,10 +1,13 @@
 package jsonconfig
 
 import (
+	"bytes"
+	"fmt"
 	"testing"
+	tmpl "text/template"
 
 	"github.com/aphistic/sweet"
-	"github.com/aphistic/sweet-junit"
+	junit "github.com/aphistic/sweet-junit"
 	. "github.com/onsi/gomega"
 )
 
@@ -21,4 +24,16 @@ func TestMain(m *testing.M) {
 		s.AddSuite(&ScenarioSuite{})
 		s.AddSuite(&TestSuite{})
 	})
+}
+
+//
+// Helpers
+
+func testExec(template *tmpl.Template) string {
+	buffer := bytes.NewBuffer(nil)
+	if err := template.Execute(buffer, nil); err != nil {
+		panic(fmt.Sprintf("failed to execute template (%s)", err.Error()))
+	}
+
+	return buffer.String()
 }

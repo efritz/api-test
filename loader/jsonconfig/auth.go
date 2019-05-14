@@ -1,6 +1,10 @@
 package jsonconfig
 
-import "github.com/efritz/api-test/config"
+import (
+	"fmt"
+
+	"github.com/efritz/api-test/config"
+)
 
 type BasicAuth struct {
 	Username string `json:"username"`
@@ -12,8 +16,18 @@ func (a *BasicAuth) Translate() (*config.BasicAuth, error) {
 		return nil, nil
 	}
 
+	usernameTemplate, err := compile(a.Username)
+	if err != nil {
+		return nil, fmt.Errorf("illegal username template (%s)", err.Error())
+	}
+
+	passwordTemplate, err := compile(a.Password)
+	if err != nil {
+		return nil, fmt.Errorf("illegal password template (%s)", err.Error())
+	}
+
 	return &config.BasicAuth{
-		Username: a.Username, // TODO - should compile
-		Password: a.Password,
+		Username: usernameTemplate,
+		Password: passwordTemplate,
 	}, nil
 }

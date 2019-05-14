@@ -14,6 +14,7 @@ type Response struct {
 	Headers    map[string]json.RawMessage `json:"headers"`
 	Body       string                     `json:"body"`
 	Extract    string                     `json:"extract"`
+	Assertions map[string]string          `json:"assertions"`
 }
 
 var patternOK = regexp.MustCompile("2..")
@@ -49,11 +50,22 @@ func (r *Response) Translate() (*config.Response, error) {
 		return nil, fmt.Errorf("illegal body regex")
 	}
 
+	assertions := map[string]*regexp.Regexp{}
+	for key, assertion := range r.Assertions {
+		pattern, err := regexp.Compile(assertion)
+		if err != nil {
+			return nil, err
+		}
+
+		assertions[key] = pattern
+	}
+
 	return &config.Response{
 		Status:     status,
 		Headers:    headers,
 		Body:       body,
 		Extract:    r.Extract,
+		Assertions: assertions,
 	}, nil
 }
 

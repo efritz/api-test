@@ -14,12 +14,12 @@ import (
 )
 
 type Loader struct {
-	loadedConfigs map[string]map[string]config.Scenario
+	loadedConfigs map[string]struct{}
 }
 
 func NewLoader() *Loader {
 	return &Loader{
-		loadedConfigs: map[string]map[string]config.Scenario{},
+		loadedConfigs: map[string]struct{}{},
 	}
 }
 
@@ -42,22 +42,18 @@ func (l *Loader) Load(path string) (*config.Config, error) {
 		return nil, err
 	}
 
-	scenarioMap := map[string][]*config.Scenario{
-		path: scenarios,
-	}
-
-	err = l.loadIncludes(
+	scenarios, err = l.loadIncludes(
 		path,
 		payload.Includes,
 		payload.GlobalRequest,
-		scenarioMap,
+		scenarios,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	flattenedMap, err := validateScenarios(scenarioMap)
+	flattenedMap, err := validateScenarios(scenarios)
 	if err != nil {
 		return nil, err
 	}
@@ -96,57 +92,59 @@ func (l *Loader) loadIncludes(
 	parent string,
 	rawIncludes json.RawMessage,
 	globalRequest *jsonconfig.GlobalRequest,
-	scenarioMap map[string][]*config.Scenario,
-) error {
+	scenarios []*config.Scenario,
+) ([]*config.Scenario, error) {
 	paths, err := util.UnmarshalStringList(rawIncludes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, path := range paths {
-		if _, ok := scenarioMap[path]; ok {
-			continue
-		}
-
-		if err := l.loadInclude(
+		scenarios, err = l.loadInclude(
 			normalizePath(path, parent),
 			globalRequest,
-			scenarioMap,
-		); err != nil {
-			return err
+			scenarios,
+		)
+
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	return nil
+	return scenarios, nil
 }
 
 func (l *Loader) loadInclude(
 	path string,
 	globalRequest *jsonconfig.GlobalRequest,
-	scenarioMap map[string][]*config.Scenario,
-) error {
+	scenarios []*config.Scenario,
+) ([]*config.Scenario, error) {
+	if _, ok := l.loadedConfigs[path]; ok {
+		return scenarios, nil
+	}
+
+	l.loadedConfigs[path] = struct{}{}
+
 	data, err := readPath(path)
 	if err != nil {
-		return fmt.Errorf("failed to load config %s: %s", path, err.Error())
+		return nil, fmt.Errorf("failed to load config %s: %s", path, err.Error())
 	}
 
 	payload := &jsonconfig.BaseConfig{}
 	if err := unmarshal(path, data, "schema/include.yaml", &payload); err != nil {
-		return err
+		return nil, err
 	}
 
-	scenarios, err := payload.Translate(globalRequest)
+	translated, err := payload.Translate(globalRequest)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	scenarioMap[path] = scenarios
 
 	return l.loadIncludes(
 		path,
 		payload.Includes,
 		globalRequest,
-		scenarioMap,
+		append(scenarios, translated...),
 	)
 }
 

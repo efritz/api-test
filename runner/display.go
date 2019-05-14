@@ -12,16 +12,8 @@ import (
 	"github.com/efritz/pentimento"
 )
 
-var (
-	runningStatus = pentimento.ScrollingDots
-	pendingStatus = pentimento.NewStaticString("   ")
-	skippedStatus = pentimento.NewStaticString(logging.Colorize(" ✗ ", logging.LevelWarn))
-	passStatus    = pentimento.NewStaticString(logging.Colorize(" ✓ ", logging.LevelInfo))
-	failedStatus  = pentimento.NewStaticString(logging.Colorize(" ✗ ", logging.LevelError))
-	errorStatus   = pentimento.NewStaticString(logging.Colorize(" ✗ ", logging.LevelError))
-)
-
 func displayProgress(
+	logger logging.Logger,
 	names []string,
 	contexts map[string]*ScenarioContext,
 	p *pentimento.Printer,
@@ -36,32 +28,32 @@ func displayProgress(
 		}
 
 		details := ""
-		for _, result := range context.Results {
+		for _, result := range context.Runner.Results() {
 			if result == nil {
 				continue
 			}
 
 			if result.Errored() {
-				details += logging.Colorize("E", logging.LevelError)
+				details += logger.Colorize("E", logging.ColorError)
 			} else if result.Failed() {
-				details += logging.Colorize("F", logging.LevelError)
+				details += logger.Colorize("F", logging.ColorError)
 			} else if result.Skipped {
-				details += logging.Colorize("S", logging.LevelWarn)
+				details += logger.Colorize("S", logging.ColorWarn)
 			} else {
-				details += logging.Colorize(".", logging.LevelInfo)
+				details += logger.Colorize(".", logging.ColorInfo)
 			}
 		}
 
-		if context.Resolved() {
+		if context.Runner.Resolved() {
 			details += fmt.Sprintf(
 				" (in %s)",
-				formatMilliseconds(context.Duration()),
+				formatMilliseconds(context.Runner.Duration()),
 			)
 		}
 
 		content.AddLine(
 			"[%s] Scenario %s %s",
-			getStatus(context),
+			getStatus(logger, context),
 			name,
 			details,
 		)
@@ -71,15 +63,15 @@ func displayProgress(
 }
 
 func displaySummary(
+	logger logging.Logger,
 	contexts map[string]*ScenarioContext,
 	started time.Time,
-	logger logging.Logger,
 ) {
 	wallDuration := time.Now().Sub(started)
 
 	totalDuration := time.Duration(0)
 	for _, context := range contexts {
-		totalDuration += context.Duration()
+		totalDuration += context.Runner.Duration()
 	}
 
 	numScenarios := 0
@@ -93,15 +85,13 @@ func displaySummary(
 			continue
 		}
 
-		if context.Skipped {
+		if !context.Skipped {
+			numScenarios++
+		} else {
 			numScenariosSkipped++
 		}
 
-		if !context.Skipped {
-			numScenarios++
-		}
-
-		for _, result := range context.Results {
+		for _, result := range context.Runner.Results() {
 			if result == nil {
 				continue
 			}
@@ -113,7 +103,7 @@ func displaySummary(
 			}
 		}
 
-		if context.Errored() || context.Failed() {
+		if context.Runner.Errored() || context.Runner.Failed() {
 			numFailures++
 		}
 	}
@@ -147,29 +137,33 @@ func displaySummary(
 	)
 
 	for _, context := range contexts {
-		for i, result := range context.Results {
+		for i, result := range context.Runner.Results() {
 			if result == nil || (!result.Errored() && !result.Failed()) {
 				continue
 			}
 
+			logger.Error(
+				"%s/%s: ",
+				context.Scenario.Name,
+				context.Scenario.Tests[i].Name,
+			)
+
 			displayFailure(
+				logger,
 				context.Scenario,
 				context.Scenario.Tests[i],
 				result,
-				logger,
 			)
 		}
 	}
 }
 
 func displayFailure(
+	logger logging.Logger,
 	scenario *config.Scenario,
 	test *config.Test,
 	result *TestResult,
-	logger logging.Logger,
 ) {
-	logger.Error("%s/%s: ", scenario.Name, test.Name)
-
 	if result.Err != nil {
 		logger.Error("Failed to perform request: %s", result.Err.Error())
 		return
@@ -177,7 +171,7 @@ func displayFailure(
 
 	for _, err := range result.RequestMatchErrors {
 		logger.Error(
-			"> %s:\n\t  Actual: '%s'\n\tExpected: '%s'",
+			"> %s:\n\tActual: '%s'\n\tExpected: '%s'",
 			err.Type,
 			err.Actual,
 			err.Expected,
@@ -190,28 +184,20 @@ func displayFailure(
 	logger.Info(formatResponse(result.Response, result.ResponseBody))
 }
 
-func getStatus(context *ScenarioContext) *pentimento.AnimatedString {
-	if context.Running {
-		return runningStatus
+func getStatus(
+	logger logging.Logger,
+	context *ScenarioContext,
+) *pentimento.AnimatedString {
+	statuses := map[bool]*pentimento.AnimatedString{
+		true:                      pentimento.ScrollingDots,
+		context.Pending:           pentimento.NewStaticString("   "),
+		context.Skipped:           pentimento.NewStaticString(logger.Colorize(" ✗ ", logging.ColorWarn)),
+		context.Runner.Errored():  pentimento.NewStaticString(logger.Colorize(" ✗ ", logging.ColorError)),
+		context.Runner.Failed():   pentimento.NewStaticString(logger.Colorize(" ✗ ", logging.ColorError)),
+		context.Runner.Resolved(): pentimento.NewStaticString(logger.Colorize(" ✓ ", logging.ColorInfo)),
 	}
 
-	if context.Skipped {
-		return skippedStatus
-	}
-
-	if context.Resolved() {
-		return passStatus
-	}
-
-	if context.Errored() {
-		return errorStatus
-	}
-
-	if context.Failed() {
-		return failedStatus
-	}
-
-	return pendingStatus
+	return statuses[true]
 }
 
 func formatMilliseconds(duration time.Duration) string {

@@ -39,6 +39,27 @@ func (s *RequestSuite) TestBuildRequest(t sweet.T) {
 	}))
 }
 
+func (s *RequestSuite) TestBuildRequestAuth(t sweet.T) {
+	request, _, err := buildRequest(
+		&config.Request{
+			Method: "put",
+			Auth: &config.BasicAuth{
+				Username: testParse("admin-{{.Index}}"),
+				Password: testParse("secret-{{.Index}}"),
+			},
+		},
+		map[string]interface{}{
+			"Index": 24,
+		},
+	)
+
+	Expect(err).To(BeNil())
+	username, password, ok := request.BasicAuth()
+	Expect(ok).To(BeTrue())
+	Expect(username).To(Equal("admin-24"))
+	Expect(password).To(Equal("secret-24"))
+}
+
 //
 // Helpers
 

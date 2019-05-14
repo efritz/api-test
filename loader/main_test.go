@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/aphistic/sweet"
-	"github.com/aphistic/sweet-junit"
+	junit "github.com/aphistic/sweet-junit"
 	. "github.com/onsi/gomega"
 )
 
@@ -15,5 +15,6 @@ func TestMain(m *testing.M) {
 		s.RegisterPlugin(junit.NewPlugin())
 
 		s.AddSuite(&LoaderSuite{})
+		s.AddSuite(&PathsSuite{})
 	})
 }

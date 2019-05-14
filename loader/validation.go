@@ -7,19 +7,15 @@ import (
 	"github.com/stevenle/topsort"
 )
 
-func validateScenarios(scenarioMap map[string][]*config.Scenario) (map[string]*config.Scenario, error) {
+func validateScenarios(scenarios []*config.Scenario) (map[string]*config.Scenario, error) {
 	flattened := map[string]*config.Scenario{}
-	for _, scenarios := range scenarioMap {
-		for _, scenario := range scenarios {
-			if _, ok := flattened[scenario.Name]; ok {
-				return nil, fmt.Errorf("scenario '%s' defined more than once", scenario.Name)
-			}
-
-			flattened[scenario.Name] = scenario
+	for _, scenario := range scenarios {
+		if _, ok := flattened[scenario.Name]; ok {
+			return nil, fmt.Errorf("scenario '%s' defined more than once", scenario.Name)
 		}
-	}
 
-	// TODO - same for tests
+		flattened[scenario.Name] = scenario
+	}
 
 	for name, scenario := range flattened {
 		for _, dependency := range scenario.Dependencies {
@@ -72,8 +68,7 @@ func checkCycles(scenarios map[string]*config.Scenario) error {
 
 	if _, err := dependencyGraph.TopSort("$"); err != nil {
 		// Error messages starts with "Cycle error: "
-		// return nil, fmt.Errorf("failed to extend cyclic config (%s)", err.Error()[13:])
-		return err
+		return fmt.Errorf("scenario dependencies are cyclic (%s)", err.Error()[13:])
 	}
 
 	return nil

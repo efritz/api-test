@@ -2,62 +2,53 @@ package logging
 
 import (
 	"fmt"
+
+	"github.com/mgutz/ansi"
 )
 
 type (
 	Logger interface {
-		Debug(format string, args ...interface{})
+		Raw(message string)
+		Log(format string, args ...interface{})
 		Info(format string, args ...interface{})
 		Warn(format string, args ...interface{})
 		Error(format string, args ...interface{})
+		Colorize(message string, color Color) string
 	}
 
 	logger struct {
 		colorize bool
-		verbose  bool
 	}
-
-	nilLogger struct{}
 )
 
-var NilLogger = &nilLogger{}
-
-func NewLogger(colorize, verbose bool) Logger {
+func NewLogger(colorize bool) Logger {
 	return &logger{
 		colorize: colorize,
-		verbose:  verbose,
 	}
 }
 
-func (l *logger) Debug(format string, args ...interface{}) {
-	l.log(LevelDebug, fmt.Sprintf(format, args...))
+func (l *logger) Raw(message string) {
+	fmt.Print(message)
 }
 
-func (l *logger) Info(format string, args ...interface{}) {
-	l.log(LevelInfo, fmt.Sprintf(format, args...))
-}
+func (l *logger) Log(format string, args ...interface{})   { l.log(ColorNone, format, args...) }
+func (l *logger) Info(format string, args ...interface{})  { l.log(ColorInfo, format, args...) }
+func (l *logger) Warn(format string, args ...interface{})  { l.log(ColorWarn, format, args...) }
+func (l *logger) Error(format string, args ...interface{}) { l.log(ColorError, format, args...) }
 
-func (l *logger) Warn(format string, args ...interface{}) {
-	l.log(LevelWarn, fmt.Sprintf(format, args...))
-}
-
-func (l *logger) Error(format string, args ...interface{}) {
-	l.log(LevelError, fmt.Sprintf(format, args...))
-}
-
-func (l *logger) log(level LogLevel, message string) {
-	if level == LevelDebug && !l.verbose {
-		return
+func (l *logger) Colorize(message string, color Color) string {
+	if !l.colorize {
+		return message
 	}
 
-	if l.colorize {
-		message = Colorize(message, level)
-	}
-
-	fmt.Println(message)
+	return fmt.Sprintf(
+		"%s%s%s",
+		colors[color],
+		message,
+		ansi.Reset,
+	)
 }
 
-func (l *nilLogger) Debug(string, ...interface{}) {}
-func (l *nilLogger) Info(string, ...interface{})  {}
-func (l *nilLogger) Warn(string, ...interface{})  {}
-func (l *nilLogger) Error(string, ...interface{}) {}
+func (l *logger) log(color Color, format string, args ...interface{}) {
+	fmt.Println(l.Colorize(fmt.Sprintf(format, args...), color))
+}

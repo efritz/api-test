@@ -3,8 +3,6 @@ package jsonconfig
 import (
 	"github.com/aphistic/sweet"
 	. "github.com/onsi/gomega"
-
-	"github.com/efritz/api-test/config"
 )
 
 type AuthSuite struct{}
@@ -17,8 +15,7 @@ func (s *AuthSuite) TestTranslate(t sweet.T) {
 
 	translated, err := auth.Translate()
 	Expect(err).To(BeNil())
-	Expect(translated).To(Equal(&config.BasicAuth{
-		Username: "admin",
-		Password: "secret",
-	}))
+	Expect(translated).NotTo(BeNil())
+	Expect(testExec(translated.Username)).To(Equal("admin"))
+	Expect(testExec(translated.Password)).To(Equal("secret"))
 }

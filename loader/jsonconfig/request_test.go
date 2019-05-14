@@ -1,10 +1,7 @@
 package jsonconfig
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
-	tmpl "text/template"
 
 	"github.com/aphistic/sweet"
 	. "github.com/onsi/gomega"
@@ -32,8 +29,8 @@ func (s *RequestSuite) TestTranslate(t sweet.T) {
 	Expect(testExec(translated.URL)).To(Equal("/users"))
 	Expect(translated.Method).To(Equal("post"))
 	Expect(translated.Auth).NotTo(BeNil())
-	Expect(translated.Auth.Username).To(Equal("admin"))
-	Expect(translated.Auth.Password).To(Equal("secret"))
+	Expect(testExec(translated.Auth.Username)).To(Equal("admin"))
+	Expect(testExec(translated.Auth.Password)).To(Equal("secret"))
 	Expect(translated.Headers).To(HaveKey("X-Custom1"))
 	Expect(translated.Headers).To(HaveKey("X-Custom2"))
 	Expect(translated.Headers["X-Custom1"]).To(HaveLen(1))
@@ -97,8 +94,9 @@ func (s *RequestSuite) TestTranslateGlobalRequestAuth(t sweet.T) {
 	})
 
 	Expect(err).To(BeNil())
-	Expect(translated.Auth.Username).To(Equal("admin"))
-	Expect(translated.Auth.Password).To(Equal("secret"))
+	Expect(translated.Auth).NotTo(BeNil())
+	Expect(testExec(translated.Auth.Username)).To(Equal("admin"))
+	Expect(testExec(translated.Auth.Password)).To(Equal("secret"))
 }
 
 func (s *RequestSuite) TestTranslateGlobalRequestAuthOverride(t sweet.T) {
@@ -117,8 +115,33 @@ func (s *RequestSuite) TestTranslateGlobalRequestAuthOverride(t sweet.T) {
 	})
 
 	Expect(err).To(BeNil())
-	Expect(translated.Auth.Username).To(Equal("adminer"))
-	Expect(translated.Auth.Password).To(Equal("secreter"))
+	Expect(translated.Auth).NotTo(BeNil())
+	Expect(testExec(translated.Auth.Username)).To(Equal("adminer"))
+	Expect(testExec(translated.Auth.Password)).To(Equal("secreter"))
+}
+
+func (s *RequestSuite) TestTranslateGlobalRequestHeaders(t sweet.T) {
+	request := &Request{
+		Headers: map[string]json.RawMessage{
+			"X-Custom2": []byte(`"baz"`),
+		},
+	}
+
+	translated, err := request.Translate(&GlobalRequest{
+		Headers: map[string]json.RawMessage{
+			"X-Custom1": []byte(`["foo", "bar"]`),
+			"X-Custom2": []byte(`"bonk"`),
+		},
+	})
+
+	Expect(err).To(BeNil())
+	Expect(translated.Headers).To(HaveKey("X-Custom1"))
+	Expect(translated.Headers).To(HaveKey("X-Custom2"))
+	Expect(translated.Headers["X-Custom1"]).To(HaveLen(2))
+	Expect(translated.Headers["X-Custom2"]).To(HaveLen(1))
+	Expect(testExec(translated.Headers["X-Custom1"][0])).To(Equal("foo"))
+	Expect(testExec(translated.Headers["X-Custom1"][1])).To(Equal("bar"))
+	Expect(testExec(translated.Headers["X-Custom2"][0])).To(Equal("baz"))
 }
 
 func (s *RequestSuite) TestTranslateStringLists(t sweet.T) {
@@ -202,14 +225,21 @@ func (s *RequestSuite) TestTranslateInvalidJSONBodyTemplate(t sweet.T) {
 	Expect(err.Error()).To(ContainSubstring("illegal json body template"))
 }
 
-//
-// Helpers
+func (s *RequestSuite) TestCompileUUID(t sweet.T) {
+	template, err := compile("{{uuid}}")
+	Expect(err).To(BeNil())
 
-func testExec(template *tmpl.Template) string {
-	buffer := bytes.NewBuffer(nil)
-	if err := template.Execute(buffer, nil); err != nil {
-		panic(fmt.Sprintf("failed to execute template (%s)", err.Error()))
-	}
+	uuid1 := testExec(template)
+	uuid2 := testExec(template)
+	uuid3 := testExec(template)
+	Expect(uuid1).NotTo(Equal(uuid2))
+	Expect(uuid1).NotTo(Equal(uuid3))
+	Expect(uuid2).NotTo(Equal(uuid3))
+	Expect(uuid1).To(MatchRegexp("[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}"))
+}
 
-	return buffer.String()
+func (s *RequestSuite) TestCompileFile(t sweet.T) {
+	template, err := compile(`{{file "request_test.go"}}`)
+	Expect(err).To(BeNil())
+	Expect(testExec(template)).To(HavePrefix("package jsonconfig\n"))
 }

@@ -58,7 +58,7 @@ func matchResponse(resp *http.Response, expected *config.Response) (string, map[
 	match, bodyGroups := matchRegex(expected.Body, string(content))
 	if !match {
 		errors = append(errors, RequestMatchError{
-			Type:     "body",
+			Type:     "Body",
 			Expected: fmt.Sprintf("%s", expected.Body),
 			Actual:   "<placeholder>", // string(content),
 		})
@@ -95,6 +95,34 @@ func matchResponse(resp *http.Response, expected *config.Response) (string, map[
 			context[k] = v
 		}
 	}
+
+	extractionGroups := map[string][]string{}
+	for key, pattern := range expected.Assertions {
+		// TODO - not just strings, any non-array non-object
+		value, ok := (context[key]).(string)
+		if !ok {
+			errors = append(errors, RequestMatchError{
+				Type:     key,
+				Expected: fmt.Sprintf("%s", pattern),
+				Actual:   fmt.Sprintf("%#v", context[key]),
+			})
+
+			continue
+		}
+
+		match, groups := matchRegex(pattern, value)
+		if !match {
+			errors = append(errors, RequestMatchError{
+				Type:     key,
+				Expected: fmt.Sprintf("%s", pattern),
+				Actual:   value,
+			})
+		}
+
+		extractionGroups[key] = groups
+	}
+
+	context["extractionGroups"] = extractionGroups
 
 	return string(content), context, errors, nil
 }

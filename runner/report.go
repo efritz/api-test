@@ -3,7 +3,11 @@ package runner
 import (
 	"encoding/xml"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
+
+	"github.com/efritz/api-test/logging"
 )
 
 type (
@@ -41,10 +45,18 @@ type (
 )
 
 func formatJUnitReport(contexts map[string]*ScenarioContext) ([]byte, error) {
-	suites := JUnitTestSuites{}
+	names := []string{}
+	for name := range contexts {
+		names = append(names, name)
+	}
 
-	for _, context := range contexts {
+	sort.Strings(names)
+
+	suites := JUnitTestSuites{}
+	for _, name := range names {
+		context := contexts[name]
 		testCases := []JUnitTestCase{}
+		results := context.Runner.Results()
 
 		for i, test := range context.Scenario.Tests {
 			testCase := JUnitTestCase{
@@ -52,14 +64,35 @@ func formatJUnitReport(contexts map[string]*ScenarioContext) ([]byte, error) {
 				Failure: nil,
 			}
 
-			if i < len(context.Results) {
-				testCase.Time = fmt.Sprintf("%.3f", float64(context.Results[i].Duration)/float64(time.Second))
+			if i < len(results) {
+				testCase.Time = fmt.Sprintf("%.3f", float64(results[i].Duration)/float64(time.Second))
 
-				if context.Results[i].Errored() || context.Results[i].Failed() {
+				if results[i].Errored() {
 					testCase.Failure = &JUnitFailure{
-						Message:  "Failed",
-						Type:     "",
-						Contents: "",
+						Type:    "Error",
+						Message: results[i].Err.Error(),
+					}
+				}
+
+				if results[i].Failed() {
+					types := []string{}
+					for _, err := range results[i].RequestMatchErrors {
+						types = append(types, err.Type)
+					}
+
+					logger := logging.NewStringLogger()
+
+					displayFailure(
+						logger,
+						context.Scenario,
+						test,
+						results[i],
+					)
+
+					testCase.Failure = &JUnitFailure{
+						Type:     "Assertion Failure",
+						Message:  fmt.Sprintf("Unexpected %s", strings.Join(types, ", ")),
+						Contents: strings.TrimSpace(logger.String()),
 					}
 				}
 			} else {
@@ -70,7 +103,7 @@ func formatJUnitReport(contexts map[string]*ScenarioContext) ([]byte, error) {
 		}
 
 		failures := 0
-		for _, result := range context.Results {
+		for _, result := range results {
 			if result.Errored() || result.Failed() {
 				failures++
 			}
@@ -79,7 +112,7 @@ func formatJUnitReport(contexts map[string]*ScenarioContext) ([]byte, error) {
 		suites.Suites = append(suites.Suites, JUnitTestSuite{
 			Tests:     len(context.Scenario.Tests),
 			Failures:  failures,
-			Time:      fmt.Sprintf("%.3f", float64(context.Duration())/float64(time.Second)),
+			Time:      fmt.Sprintf("%.3f", float64(context.Runner.Duration())/float64(time.Second)),
 			Name:      context.Scenario.Name,
 			TestCases: testCases,
 		})
@@ -87,9 +120,3 @@ func formatJUnitReport(contexts map[string]*ScenarioContext) ([]byte, error) {
 
 	return xml.MarshalIndent(suites, "", "\t")
 }
-
-// writer := bufio.NewWriter(w)
-// 	writer.WriteString(xml.Header)
-// writer.Write(bytes)
-// writer.WriteByte('\n')
-// writer.Flush()

@@ -15,44 +15,71 @@ import (
 	"github.com/efritz/pentimento"
 )
 
-type Runner struct {
-	config          *config.Config
-	logger          logging.Logger
-	junitReportPath string
-	client          *http.Client
-	names           []string
-	contexts        map[string]*ScenarioContext
-	halt            chan struct{}
-	sequenceMutex   sync.Mutex
-	wg              sync.WaitGroup
-}
+type (
+	Runner struct {
+		config                *config.Config
+		logger                logging.Logger
+		junitReportPath       string
+		scenarioRunnerFactory ScenarioRunnerFactory
+		client                *http.Client
+		names                 []string
+		contexts              map[string]*ScenarioContext
+		halt                  chan struct{}
+		sequenceMutex         sync.Mutex
+		wg                    sync.WaitGroup
+	}
 
-func NewRunner(config *config.Config, logger logging.Logger, junitReportPath string) *Runner {
+	ScenarioContext struct {
+		Scenario *config.Scenario
+		Runner   ScenarioRunner
+		Pending  bool
+		Skipped  bool
+		Context  map[string]interface{}
+	}
+)
+
+func NewRunner(
+	config *config.Config,
+	runnerConfigs ...RunnerConfigFunc,
+) *Runner {
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
 
-	names := []string{}
-	contexts := map[string]*ScenarioContext{}
-
-	for name, scenario := range config.Scenarios {
-		names = append(names, name)
-		contexts[name] = NewScenarioContext(scenario, config.Options.ForceSequential)
+	r := &Runner{
+		config:                config,
+		logger:                logging.NilLogger,
+		junitReportPath:       "",
+		scenarioRunnerFactory: ScenarioRunnerFactoryFunc(NewScenarioRunner),
+		client:                client,
+		halt:                  make(chan struct{}),
+		names:                 []string{},
+		contexts:              map[string]*ScenarioContext{},
 	}
 
-	sort.Strings(names)
-
-	return &Runner{
-		config:          config,
-		logger:          logger,
-		junitReportPath: junitReportPath,
-		client:          client,
-		names:           names,
-		contexts:        contexts,
-		halt:            make(chan struct{}),
+	for _, f := range runnerConfigs {
+		f(r)
 	}
+
+	for name := range config.Scenarios {
+		r.names = append(r.names, name)
+	}
+
+	sort.Strings(r.names)
+
+	for _, name := range r.names {
+		scenario := config.Scenarios[name]
+
+		r.contexts[name] = &ScenarioContext{
+			Scenario: scenario,
+			Runner:   r.scenarioRunnerFactory.New(scenario, config.Options.ForceSequential),
+			Pending:  true,
+		}
+	}
+
+	return r
 }
 
 func (r *Runner) Run() error {
@@ -64,23 +91,12 @@ func (r *Runner) Run() error {
 		r.wg.Wait()
 	}()
 
-	pentimento.PrintProgress(func(p *pentimento.Printer) error {
-	outer:
-		for {
-			select {
-			case <-r.halt:
-				break outer
-			case <-time.After(time.Millisecond * 100):
-			}
+	pentimento.PrintProgress(
+		r.progressUpdater,
+		pentimento.WithWriter(logging.Writer(r.logger)),
+	)
 
-			displayProgress(r.names, r.contexts, p)
-		}
-
-		displayProgress(r.names, r.contexts, p)
-		return nil
-	})
-
-	displaySummary(r.contexts, started, r.logger)
+	displaySummary(r.logger, r.contexts, started)
 
 	if r.junitReportPath != "" {
 		content, err := formatJUnitReport(r.contexts)
@@ -95,6 +111,22 @@ func (r *Runner) Run() error {
 		}
 	}
 
+	return nil
+}
+
+func (r *Runner) progressUpdater(p *pentimento.Printer) error {
+outer:
+	for {
+		select {
+		case <-r.halt:
+			break outer
+		case <-time.After(time.Millisecond * 100):
+		}
+
+		displayProgress(r.logger, r.names, r.contexts, p)
+	}
+
+	displayProgress(r.logger, r.names, r.contexts, p)
 	return nil
 }
 
@@ -118,11 +150,11 @@ func (r *Runner) submitReady() {
 				shouldSkip = true
 			}
 
-			if r.contexts[dependency].Errored() || r.contexts[dependency].Failed() {
+			if r.contexts[dependency].Runner.Errored() || r.contexts[dependency].Runner.Failed() {
 				shouldSkip = true
 			}
 
-			if !r.contexts[dependency].Resolved() {
+			if !r.contexts[dependency].Runner.Resolved() {
 				shouldSubmit = false
 			}
 		}
@@ -155,37 +187,27 @@ func (r *Runner) submit(context *ScenarioContext) {
 		defer r.sequenceMutex.Unlock()
 	}
 
-	context.Running = true
-	r.prepareContext(context)
-
-	for result := range context.Run(r.client) {
-		for len(context.Results) <= result.Index {
-			context.Results = append(context.Results, nil)
-		}
-
-		if !result.Disabled {
-			context.Results[result.Index] = result
-		}
-	}
-
-	context.Running = false
+	context.Context = context.Runner.Run(r.client, r.makeContext(context))
 	r.submitReady()
 }
 
-func (r *Runner) prepareContext(context *ScenarioContext) {
-	context.Context = map[string]interface{}{}
-
+func (r *Runner) makeContext(context *ScenarioContext) map[string]interface{} {
+	// TODO - make a whitelist instead
 	envMap := map[string]string{}
 	for _, pair := range os.Environ() {
 		parts := strings.Split(pair, "=")
 		envMap[parts[0]] = parts[1]
 	}
 
-	context.Context["env"] = envMap
+	newContext := map[string]interface{}{
+		"env": envMap,
+	}
 
 	for _, dependency := range r.getAllDependencies(context) {
-		context.Context[dependency] = r.contexts[dependency].Context
+		newContext[dependency] = r.contexts[dependency].Context
 	}
+
+	return newContext
 }
 
 func (r *Runner) getAllDependencies(context *ScenarioContext) []string {

@@ -1,23 +1,19 @@
 package logging
 
-import (
-	"fmt"
+import "github.com/mgutz/ansi"
 
-	"github.com/mgutz/ansi"
+type Color int
+
+const (
+	ColorNone Color = iota
+	ColorInfo
+	ColorWarn
+	ColorError
 )
 
-var levelColors = map[LogLevel]string{
-	LevelDebug: ansi.Cyan,
-	LevelInfo:  ansi.Green,
-	LevelWarn:  ansi.Yellow,
-	LevelError: ansi.ColorCode("red+b"),
-}
-
-func Colorize(message string, level LogLevel) string {
-	return fmt.Sprintf(
-		"%s%s%s",
-		levelColors[level],
-		message,
-		ansi.Reset,
-	)
+var colors = map[Color]string{
+	ColorNone:  "",
+	ColorInfo:  ansi.Green,
+	ColorWarn:  ansi.Yellow,
+	ColorError: ansi.ColorCode("red+b"),
 }

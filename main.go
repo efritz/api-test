@@ -13,7 +13,6 @@ import (
 type Options struct {
 	Colorize        bool
 	ConfigPath      string
-	Verbose         bool
 	JUnitReportPath string
 	ForceSequential bool
 }
@@ -25,7 +24,6 @@ func main() {
 	app := kingpin.New("api-test", "api-test is a test runner against a local API.").Version(Version)
 	app.Flag("color", "Enable colorized output.").Default("true").BoolVar(&opts.Colorize) // TOOD (fix in ij too)
 	app.Flag("config", "The path to the config file.").Short('f').StringVar(&opts.ConfigPath)
-	app.Flag("verbose", "Output debug logs.").Short('v').Default("false").BoolVar(&opts.Verbose)
 	app.Flag("junit", "The path to write a JUnit XML report.").Short('j').StringVar(&opts.JUnitReportPath)
 	app.Flag("force-sequential", "Disable parallel execution.").Default("false").BoolVar(&opts.ForceSequential)
 	tests := app.Arg("tests", "A list of specific scenarios or tests to run.").Strings()
@@ -37,7 +35,6 @@ func main() {
 
 	logger := logging.NewLogger(
 		opts.Colorize,
-		opts.Verbose,
 	)
 
 	path, err := loader.GetConfigPath(opts.ConfigPath)
@@ -65,8 +62,8 @@ func main() {
 
 	runner := runner.NewRunner(
 		config,
-		logger,
-		opts.JUnitReportPath,
+		runner.WithLogger(logger),
+		runner.WithJUnitReportPath(opts.JUnitReportPath),
 	)
 
 	if err := runner.Run(); err != nil {

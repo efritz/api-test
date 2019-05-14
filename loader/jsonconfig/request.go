@@ -19,8 +19,6 @@ type Request struct {
 	Headers  map[string]json.RawMessage `json:"headers"`
 	Body     string                     `json:"body"`
 	JSONBody json.RawMessage            `json:"json-body"` // TODO - this quotes in a way that is bad
-	// TODO - form
-	// TODO - file
 }
 
 func (r *Request) Translate(globalRequest *GlobalRequest) (*config.Request, error) {
@@ -120,7 +118,6 @@ func sanitizeHeaders(rawHeaders map[string]json.RawMessage, globalRequest *Globa
 				return nil, err
 			}
 
-			// TODO - test merge
 			if _, ok := headers[name]; !ok {
 				headers[name] = values
 			}
@@ -139,6 +136,7 @@ func sanitizeAuth(auth *BasicAuth, globalRequest *GlobalRequest) *BasicAuth {
 }
 
 func isRelative(uri string) bool {
+	// TODO - need to do this in the runner if scheme in a template
 	for _, prefix := range []string{"http://", "https://"} {
 		if strings.HasPrefix(uri, prefix) {
 			return false
@@ -150,12 +148,11 @@ func isRelative(uri string) bool {
 
 func compile(template string) (*tmpl.Template, error) {
 	funcs := tmpl.FuncMap{
-		// TODO - test functions
 		"uuid": func() string { return uuid.New().String() },
 		"file": func(path string) string {
 			content, err := ioutil.ReadFile(path)
 			if err != nil {
-				// TODO - some error?
+				// TODO - return an error?
 				return "<failed to read file>"
 			}
 

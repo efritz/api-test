@@ -41,6 +41,20 @@ func buildRequest(prototype *config.Request, context map[string]interface{}) (*h
 		}
 	}
 
+	if prototype.Auth != nil {
+		username, err := applyTemplate(prototype.Auth.Username, context)
+		if err != nil {
+			return nil, "", err
+		}
+
+		password, err := applyTemplate(prototype.Auth.Password, context)
+		if err != nil {
+			return nil, "", err
+		}
+
+		req.SetBasicAuth(username, password)
+	}
+
 	return req, body, err
 }
 

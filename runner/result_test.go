@@ -9,12 +9,16 @@ import (
 
 type ResultSuite struct{}
 
-func (s *ResultSuite) TestFailed(t sweet.T) {
+func (s *ResultSuite) TestErrored(t sweet.T) {
 	result1 := &TestResult{Err: fmt.Errorf("oops")}
-	result2 := &TestResult{RequestMatchErrors: []RequestMatchError{RequestMatchError{}}}
-	result3 := &TestResult{}
+	result2 := &TestResult{}
+	Expect(result1.Errored()).To(BeTrue())
+	Expect(result2.Errored()).To(BeFalse())
+}
 
+func (s *ResultSuite) TestFailed(t sweet.T) {
+	result1 := &TestResult{RequestMatchErrors: []RequestMatchError{RequestMatchError{}}}
+	result2 := &TestResult{}
 	Expect(result1.Failed()).To(BeTrue())
-	Expect(result2.Failed()).To(BeTrue())
-	Expect(result3.Failed()).To(BeFalse())
+	Expect(result2.Failed()).To(BeFalse())
 }
