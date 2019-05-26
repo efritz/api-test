@@ -1,6 +1,6 @@
 # API Test
 
-A test runner for API request/responses. Coming soon.
+API-Test is a concurrent runner for API integration tests.
 
 ## Concepts
 
@@ -20,7 +20,6 @@ The following command line flags are applicable for all IJ commands.
 | force-sequential |            | Disable parallel execution. This will enforce that only one test is active at a time. The order that tests run are dependent only on scenario and test dependencies and may not consistent between runs. |
 | junit            | j          | The target file to write the JUnit report file. |
 | no-color         |            | Disable colorized output. |
-| verbose          | v          | Show debug-level output. |
 
 ## License
 

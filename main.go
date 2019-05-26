@@ -11,8 +11,8 @@ import (
 )
 
 type Options struct {
-	Colorize        bool
 	ConfigPath      string
+	DisableColor    bool
 	JUnitReportPath string
 	ForceSequential bool
 }
@@ -22,8 +22,8 @@ const Version = "0.1.0"
 func main() {
 	opts := &Options{}
 	app := kingpin.New("api-test", "api-test is a test runner against a local API.").Version(Version)
-	app.Flag("color", "Enable colorized output.").Default("true").BoolVar(&opts.Colorize) // TOOD (fix in ij too)
 	app.Flag("config", "The path to the config file.").Short('f').StringVar(&opts.ConfigPath)
+	app.Flag("no-color", "Disable colorized output.").Default("false").BoolVar(&opts.DisableColor)
 	app.Flag("junit", "The path to write a JUnit XML report.").Short('j').StringVar(&opts.JUnitReportPath)
 	app.Flag("force-sequential", "Disable parallel execution.").Default("false").BoolVar(&opts.ForceSequential)
 	tests := app.Arg("tests", "A list of specific scenarios or tests to run.").Strings()
@@ -33,9 +33,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := logging.NewLogger(
-		opts.Colorize,
-	)
+	logger := logging.NewLogger(!opts.DisableColor)
 
 	path, err := loader.GetConfigPath(opts.ConfigPath)
 	if err != nil {
