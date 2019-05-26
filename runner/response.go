@@ -71,51 +71,35 @@ func matchResponse(resp *http.Response, expected *config.Response) (string, map[
 		"bodyGroups":   bodyGroups,
 	}
 
-	if expected.Extract != "" {
-		var payload interface{}
-		if err := json.Unmarshal(content, &payload); err != nil {
-			return "", nil, nil, err
-		}
-
-		results, err := jq.Run(expected.Extract, payload)
+	for key, expr := range expected.Extract {
+		value, err := extract(content, expr, false)
 		if err != nil {
 			return "", nil, nil, err
 		}
 
-		if len(results) != 1 {
-			return "", nil, nil, fmt.Errorf("extraction expects a single object")
+		context[key] = value
+	}
+
+	for key, expr := range expected.ExtractList {
+		value, err := extract(content, expr, true)
+		if err != nil {
+			return "", nil, nil, err
 		}
 
-		resultMap, ok := results[0].(map[string]interface{})
-		if !ok {
-			return "", nil, nil, fmt.Errorf("extraction expects a single object")
-		}
-
-		for k, v := range resultMap {
-			context[k] = v
-		}
+		context[key] = value
 	}
 
 	extractionGroups := map[string][]string{}
 	for key, pattern := range expected.Assertions {
-		// TODO - not just strings, any non-array non-object
-		value, ok := (context[key]).(string)
-		if !ok {
-			errors = append(errors, RequestMatchError{
-				Type:     key,
-				Expected: fmt.Sprintf("%s", pattern),
-				Actual:   fmt.Sprintf("%#v", context[key]),
-			})
+		rawValue := context[key]
+		strValue := fmt.Sprintf("%v", rawValue)
 
-			continue
-		}
-
-		match, groups := matchRegex(pattern, value)
+		match, groups := matchRegex(pattern, strValue)
 		if !match {
 			errors = append(errors, RequestMatchError{
 				Type:     key,
 				Expected: fmt.Sprintf("%s", pattern),
-				Actual:   value,
+				Actual:   strValue,
 			})
 		}
 
@@ -137,4 +121,26 @@ func matchRegex(re *regexp.Regexp, val string) (bool, []string) {
 	}
 
 	return true, re.FindStringSubmatch(val)
+}
+
+func extract(content []byte, expr string, all bool) (interface{}, error) {
+	var payload interface{}
+	if err := json.Unmarshal(content, &payload); err != nil {
+		return nil, err
+	}
+
+	results, err := jq.Run(expr, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	if all {
+		return results, nil
+	}
+
+	if len(results) > 0 {
+		return results[0], nil
+	}
+
+	return nil, nil
 }

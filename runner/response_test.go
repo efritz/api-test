@@ -107,5 +107,3 @@ func (s *ResponseSuite) TestMatchResponseMismatchedBody(t sweet.T) {
 		Actual:   "<placeholder>",
 	}))
 }
-
-// TODO - redo extraction

@@ -15,8 +15,10 @@ func (s *ResponseSuite) TestTranslate(t sweet.T) {
 		Headers: map[string]json.RawMessage{
 			"X-Test": json.RawMessage(`"text/.*"`),
 		},
-		Body:    "body",
-		Extract: ".[].id",
+		Body: "body",
+		ExtractList: map[string]string{
+			"ids": ".[].id",
+		},
 	}
 
 	translated, err := response.Translate()
@@ -30,7 +32,7 @@ func (s *ResponseSuite) TestTranslate(t sweet.T) {
 	Expect(translated.Headers["X-Test"]).To(HaveLen(1))
 	Expect(translated.Headers["X-Test"][0].MatchString("text/html")).To(BeTrue())
 	Expect(translated.Headers["X-Test"][0].MatchString("data/json")).To(BeFalse())
-	Expect(translated.Extract).To(Equal(".[].id"))
+	Expect(translated.ExtractList).To(HaveKeyWithValue("ids", ".[].id"))
 }
 
 func (s *ResponseSuite) TestTranslateNumericStatus(t sweet.T) {

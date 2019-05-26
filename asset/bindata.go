@@ -138,7 +138,13 @@ definitions:
       body:
         type: string
       extract:
-        type: string
+        type: object
+        additionalProperties:
+          type: string
+      extract-list:
+        type: object
+        additionalProperties:
+          type: string
       assertions:
         type: object
         additionalProperties:
@@ -185,7 +191,7 @@ func schemaConfigYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/config.yaml", size: 2508, mode: os.FileMode(420), modTime: time.Unix(1557502629, 0)}
+	info := bindataFileInfo{name: "schema/config.yaml", size: 2655, mode: os.FileMode(420), modTime: time.Unix(1557884295, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -268,7 +274,13 @@ definitions:
       body:
         type: string
       extract:
-        type: string
+        type: object
+        additionalProperties:
+          type: string
+      extract-list:
+        type: object
+        additionalProperties:
+          type: string
       assertions:
         type: object
         additionalProperties:
@@ -311,7 +323,7 @@ func schemaIncludeYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/include.yaml", size: 2062, mode: os.FileMode(420), modTime: time.Unix(1557155797, 0)}
+	info := bindataFileInfo{name: "schema/include.yaml", size: 2209, mode: os.FileMode(420), modTime: time.Unix(1557884300, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -343,7 +355,7 @@ func schemaOverrideYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/override.yaml", size: 239, mode: os.FileMode(420), modTime: time.Unix(1557502622, 0)}
+	info := bindataFileInfo{name: "schema/override.yaml", size: 239, mode: os.FileMode(420), modTime: time.Unix(1557884302, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

@@ -10,11 +10,12 @@ import (
 )
 
 type Response struct {
-	Status     json.RawMessage            `json:"status"`
-	Headers    map[string]json.RawMessage `json:"headers"`
-	Body       string                     `json:"body"`
-	Extract    string                     `json:"extract"`
-	Assertions map[string]string          `json:"assertions"`
+	Status      json.RawMessage            `json:"status"`
+	Headers     map[string]json.RawMessage `json:"headers"`
+	Body        string                     `json:"body"`
+	Extract     map[string]string          `json:"extract"`
+	ExtractList map[string]string          `json:"extract-list"`
+	Assertions  map[string]string          `json:"assertions"`
 }
 
 var patternOK = regexp.MustCompile("2..")
@@ -61,11 +62,12 @@ func (r *Response) Translate() (*config.Response, error) {
 	}
 
 	return &config.Response{
-		Status:     status,
-		Headers:    headers,
-		Body:       body,
-		Extract:    r.Extract,
-		Assertions: assertions,
+		Status:      status,
+		Headers:     headers,
+		Body:        body,
+		Extract:     r.Extract,
+		ExtractList: r.ExtractList,
+		Assertions:  assertions,
 	}, nil
 }
 

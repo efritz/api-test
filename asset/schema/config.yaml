@@ -92,7 +92,13 @@ definitions:
       body:
         type: string
       extract:
-        type: string
+        type: object
+        additionalProperties:
+          type: string
+      extract-list:
+        type: object
+        additionalProperties:
+          type: string
       assertions:
         type: object
         additionalProperties:
