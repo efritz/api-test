@@ -25,6 +25,7 @@ type (
 		names                 []string
 		contexts              map[string]*ScenarioContext
 		halt                  chan struct{}
+		submitMutex           sync.Mutex
 		sequenceMutex         sync.Mutex
 		wg                    sync.WaitGroup
 	}
@@ -131,8 +132,14 @@ outer:
 }
 
 func (r *Runner) submitReady() {
-	skipped := false
+	r.submitMutex.Lock()
+	defer r.submitMutex.Unlock()
 
+	for r.submitReadyLocked() {
+	}
+}
+
+func (r *Runner) submitReadyLocked() bool {
 	for _, context := range r.contexts {
 		if context.Scenario.Disabled || !context.Pending {
 			continue
@@ -160,10 +167,9 @@ func (r *Runner) submitReady() {
 		}
 
 		if shouldSkip {
-			skipped = true
 			context.Skipped = true
 			context.Pending = false
-			continue
+			return true
 		}
 
 		if shouldSubmit {
@@ -174,9 +180,7 @@ func (r *Runner) submitReady() {
 		}
 	}
 
-	if skipped {
-		r.submitReady()
-	}
+	return false
 }
 
 func (r *Runner) submit(context *ScenarioContext) {

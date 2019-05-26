@@ -204,10 +204,19 @@ func (s *ScenarioRunnerSuite) TestRunParallelFailure(t sweet.T) {
 	reqBodies := []string{`{"req": "r1"}`, `{"req": "r2"}`, `{"req": "r3"}`}
 	respBodies := []string{`{"resp": "r1"}`, `{"resp": "r2"}`, `{"resp": "r3"}`}
 
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		for i, path := range paths {
+			if path == r.URL.Path {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(respBodies[i]))
+			}
+		}
+	}
+
 	server := ghttp.NewServer()
-	server.AppendHandlers(ghttp.RespondWith(http.StatusOK, respBodies[0]))
-	server.AppendHandlers(ghttp.RespondWith(http.StatusOK, respBodies[1]))
-	server.AppendHandlers(ghttp.RespondWith(http.StatusOK, respBodies[2]))
+	server.AppendHandlers(handler)
+	server.AppendHandlers(handler)
+	server.AppendHandlers(handler)
 
 	scenario := &config.Scenario{
 		Tests: []*config.Test{
