@@ -60,7 +60,7 @@ func matchResponse(resp *http.Response, expected *config.Response) (string, map[
 		errors = append(errors, RequestMatchError{
 			Type:     "Body",
 			Expected: fmt.Sprintf("%s", expected.Body),
-			Actual:   "<placeholder>", // string(content),
+			Actual:   string(content),
 		})
 	}
 

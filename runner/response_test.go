@@ -104,6 +104,6 @@ func (s *ResponseSuite) TestMatchResponseMismatchedBody(t sweet.T) {
 	Expect(errors).To(ConsistOf(RequestMatchError{
 		Type:     "Body",
 		Expected: `data: (\d+)`,
-		Actual:   "<placeholder>",
+		Actual:   "data: payload",
 	}))
 }

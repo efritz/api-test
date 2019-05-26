@@ -146,7 +146,7 @@ func (s *ScenarioRunnerSuite) TestRunFailure(t sweet.T) {
 	Expect(results[1].RequestMatchErrors[0]).To(Equal(RequestMatchError{
 		Type:     "Body",
 		Expected: "missing pattern",
-		Actual:   "<placeholder>",
+		Actual:   `{"resp": "r2"}`,
 	}))
 }
 
@@ -266,7 +266,7 @@ func (s *ScenarioRunnerSuite) TestRunParallelFailure(t sweet.T) {
 	Expect(results[1].RequestMatchErrors[0]).To(Equal(RequestMatchError{
 		Type:     "Body",
 		Expected: "missing pattern",
-		Actual:   "<placeholder>",
+		Actual:   `{"resp": "r2"}`,
 	}))
 	Expect(results[2].RequestMatchErrors).To(HaveLen(0))
 }
