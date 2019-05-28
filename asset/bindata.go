@@ -56,6 +56,8 @@ definitions:
             const: jq
           expr:
             type: string
+          list:
+            type: boolean
           assertion:
             $ref: '#/definitions/assertion'
           header:
@@ -92,6 +94,17 @@ definitions:
         required:
             - type
             - pattern
+      - type: object
+        properties:
+          type:
+            type: string
+            const: jsonschema
+          schema:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - schema
   stringOrList:
     oneOf:
       - type: string
@@ -224,7 +237,7 @@ func schemaConfigYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/config.yaml", size: 3395, mode: os.FileMode(420), modTime: time.Unix(1558928703, 0)}
+	info := bindataFileInfo{name: "schema/config.yaml", size: 3686, mode: os.FileMode(420), modTime: time.Unix(1558971077, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -241,6 +254,8 @@ definitions:
             const: jq
           expr:
             type: string
+          list:
+            type: boolean
           assertion:
             $ref: '#/definitions/assertion'
           header:
@@ -277,6 +292,17 @@ definitions:
         required:
             - type
             - pattern
+      - type: object
+        properties:
+          type:
+            type: string
+            const: jsonschema
+          schema:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - schema
   stringOrList:
     oneOf:
       - type: string
@@ -389,7 +415,7 @@ func schemaIncludeYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/include.yaml", size: 2949, mode: os.FileMode(420), modTime: time.Unix(1558928700, 0)}
+	info := bindataFileInfo{name: "schema/include.yaml", size: 3240, mode: os.FileMode(420), modTime: time.Unix(1558971078, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
