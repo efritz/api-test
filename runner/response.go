@@ -26,21 +26,25 @@ func matchResponse(resp *http.Response, expected *config.Response) (string, map[
 		return "", nil, nil, err
 	}
 
-	errors := []RequestMatchError{}
+	headers := map[string]string{}
+	for name, values := range resp.Header {
+		headers[name] = values[0]
+	}
 
-	match, statusGroups := matchRegex(expected.Status, fmt.Sprintf("%d", resp.StatusCode))
-	if !match {
+	errors := []RequestMatchError{}
+	strStatus := fmt.Sprintf("%d", resp.StatusCode)
+
+	if match, _ := matchRegex(expected.Status, strStatus); !match {
 		errors = append(errors, RequestMatchError{
 			Type:     "Status Code",
 			Expected: fmt.Sprintf("%s", expected.Status),
-			Actual:   fmt.Sprintf("%d", resp.StatusCode),
+			Actual:   strStatus,
 		})
 	}
 
 	context := map[string]interface{}{
-		// TODO - rename these (keep it symmetric in derision as well)
-		"statusGroups": statusGroups,
-		// TODO - put all headers here?
+		"status":  resp.StatusCode,
+		"headers": headers,
 	}
 
 	for key, extractor := range expected.Extract {
@@ -73,7 +77,8 @@ func getSource(
 	content []byte,
 ) (string, string) {
 	if extractor.Header != "" {
-		return fmt.Sprintf("Header '%s'", extractor.Header), resp.Header[extractor.Header][0]
+		sourceType := fmt.Sprintf("Header '%s'", extractor.Header)
+		return sourceType, resp.Header[extractor.Header][0]
 	}
 
 	return "body", string(content)
@@ -125,7 +130,6 @@ func assert(
 	}
 
 	if assertion.Pattern != nil {
-		// TODO - enforce string?
 		strValue := fmt.Sprintf("%s", value)
 
 		if match, _ := matchRegex(assertion.Pattern, strValue); !match {
