@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 type (
 	Runner struct {
 		config                *config.Config
+		env                   []string
 		logger                logging.Logger
 		junitReportPath       string
 		scenarioRunnerFactory ScenarioRunnerFactory
@@ -196,11 +196,9 @@ func (r *Runner) submit(context *ScenarioContext) {
 }
 
 func (r *Runner) makeContext(context *ScenarioContext) map[string]interface{} {
-	// TODO - make a whitelist instead
 	envMap := map[string]string{}
-	for _, pair := range os.Environ() {
-		parts := strings.Split(pair, "=")
-		envMap[parts[0]] = parts[1]
+	for _, name := range r.env {
+		envMap[name] = os.Getenv(name)
 	}
 
 	newContext := map[string]interface{}{

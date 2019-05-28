@@ -12,6 +12,7 @@ import (
 
 type Options struct {
 	ConfigPath      string
+	Env             []string
 	DisableColor    bool
 	JUnitReportPath string
 	ForceSequential bool
@@ -23,6 +24,7 @@ func main() {
 	opts := &Options{}
 	app := kingpin.New("api-test", "api-test is a test runner against a local API.").Version(Version)
 	app.Flag("config", "The path to the config file.").Short('f').StringVar(&opts.ConfigPath)
+	app.Flag("env", "Environment variables.").Short('e').StringsVar(&opts.Env)
 	app.Flag("no-color", "Disable colorized output.").Default("false").BoolVar(&opts.DisableColor)
 	app.Flag("junit", "The path to write a JUnit XML report.").Short('j').StringVar(&opts.JUnitReportPath)
 	app.Flag("force-sequential", "Disable parallel execution.").Default("false").BoolVar(&opts.ForceSequential)
@@ -61,6 +63,7 @@ func main() {
 	runner := runner.NewRunner(
 		config,
 		runner.WithLogger(logger),
+		runner.WithEnvironment(opts.Env),
 		runner.WithJUnitReportPath(opts.JUnitReportPath),
 	)
 

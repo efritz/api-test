@@ -10,6 +10,10 @@ func WithLogger(logger logging.Logger) RunnerConfigFunc {
 	return func(c *Runner) { c.logger = logger }
 }
 
+func WithEnvironment(env []string) RunnerConfigFunc {
+	return func(c *Runner) { c.env = env }
+}
+
 func WithJUnitReportPath(path string) RunnerConfigFunc {
 	return func(c *Runner) { c.junitReportPath = path }
 }
