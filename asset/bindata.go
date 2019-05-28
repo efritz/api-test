@@ -47,6 +47,51 @@ func (fi bindataFileInfo) Sys() interface{} {
 var _schemaConfigYaml = []byte(`---
 
 definitions:
+  extractor:
+    oneOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            const: jq
+          expr:
+            type: string
+          assertion:
+            $ref: '#/definitions/assertion'
+          header:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - expr
+      - type: object
+        properties:
+          type:
+            type: string
+            const: regex
+          pattern:
+            type: string
+          assertion:
+            $ref: '#/definitions/assertion'
+          header:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - pattern
+  assertion:
+    oneOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            const: regex
+          pattern:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - pattern
   stringOrList:
     oneOf:
       - type: string
@@ -133,22 +178,10 @@ definitions:
         anyOf:
           - type: string
           - type: number
-      headers:
-        $ref: '#/definitions/headers'
-      body:
-        type: string
       extract:
         type: object
         additionalProperties:
-          type: string
-      extract-list:
-        type: object
-        additionalProperties:
-          type: string
-      assertions:
-        type: object
-        additionalProperties:
-          type: string
+          $ref: '#/definitions/extractor'
     additionalProperties: false
   headers:
     type: object
@@ -191,7 +224,7 @@ func schemaConfigYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/config.yaml", size: 2655, mode: os.FileMode(420), modTime: time.Unix(1557884295, 0)}
+	info := bindataFileInfo{name: "schema/config.yaml", size: 3395, mode: os.FileMode(420), modTime: time.Unix(1558928703, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -199,6 +232,51 @@ func schemaConfigYaml() (*asset, error) {
 var _schemaIncludeYaml = []byte(`---
 
 definitions:
+  extractor:
+    oneOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            const: jq
+          expr:
+            type: string
+          assertion:
+            $ref: '#/definitions/assertion'
+          header:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - expr
+      - type: object
+        properties:
+          type:
+            type: string
+            const: regex
+          pattern:
+            type: string
+          assertion:
+            $ref: '#/definitions/assertion'
+          header:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - pattern
+  assertion:
+    oneOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            const: regex
+          pattern:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - pattern
   stringOrList:
     oneOf:
       - type: string
@@ -269,22 +347,10 @@ definitions:
         anyOf:
           - type: string
           - type: number
-      headers:
-        $ref: '#/definitions/headers'
-      body:
-        type: string
       extract:
         type: object
         additionalProperties:
-          type: string
-      extract-list:
-        type: object
-        additionalProperties:
-          type: string
-      assertions:
-        type: object
-        additionalProperties:
-          type: string
+          $ref: '#/definitions/extractor'
     additionalProperties: false
   headers:
     type: object
@@ -323,7 +389,7 @@ func schemaIncludeYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/include.yaml", size: 2209, mode: os.FileMode(420), modTime: time.Unix(1557884300, 0)}
+	info := bindataFileInfo{name: "schema/include.yaml", size: 2949, mode: os.FileMode(420), modTime: time.Unix(1558928700, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

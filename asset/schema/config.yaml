@@ -1,6 +1,64 @@
 ---
 
 definitions:
+  extractor:
+    oneOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            const: jq
+          expr:
+            type: string
+          list:
+            type: boolean
+          assertion:
+            $ref: '#/definitions/assertion'
+          header:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - expr
+      - type: object
+        properties:
+          type:
+            type: string
+            const: regex
+          pattern:
+            type: string
+          assertion:
+            $ref: '#/definitions/assertion'
+          header:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - pattern
+  assertion:
+    oneOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            const: regex
+          pattern:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - pattern
+      - type: object
+        properties:
+          type:
+            type: string
+            const: jsonschema
+          schema:
+            type: string
+        additionalProperties: false
+        required:
+            - type
+            - schema
   stringOrList:
     oneOf:
       - type: string
@@ -87,22 +145,10 @@ definitions:
         anyOf:
           - type: string
           - type: number
-      headers:
-        $ref: '#/definitions/headers'
-      body:
-        type: string
       extract:
         type: object
         additionalProperties:
-          type: string
-      extract-list:
-        type: object
-        additionalProperties:
-          type: string
-      assertions:
-        type: object
-        additionalProperties:
-          type: string
+          $ref: '#/definitions/extractor'
     additionalProperties: false
   headers:
     type: object

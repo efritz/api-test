@@ -6,16 +6,11 @@ import (
 	"regexp"
 
 	"github.com/efritz/api-test/config"
-	"github.com/efritz/api-test/loader/util"
 )
 
 type Response struct {
-	Status      json.RawMessage            `json:"status"`
-	Headers     map[string]json.RawMessage `json:"headers"`
-	Body        string                     `json:"body"`
-	Extract     map[string]string          `json:"extract"`
-	ExtractList map[string]string          `json:"extract-list"`
-	Assertions  map[string]string          `json:"assertions"`
+	Status  json.RawMessage            `json:"status"`
+	Extract map[string]json.RawMessage `json:"extract"`
 }
 
 var patternOK = regexp.MustCompile("2..")
@@ -26,48 +21,19 @@ func (r *Response) Translate() (*config.Response, error) {
 		return nil, err
 	}
 
-	headers := map[string][]*regexp.Regexp{}
-	for name, raw := range r.Headers {
-		values, err := util.UnmarshalStringList(raw)
+	extractors := map[string]*config.ValueExtractor{}
+	for key, value := range r.Extract {
+		extractor, err := unmarshalValueExtractor(value)
 		if err != nil {
 			return nil, err
 		}
 
-		patterns := []*regexp.Regexp{}
-		for _, value := range values {
-			pattern, err := regexp.Compile(value)
-			if err != nil {
-				return nil, fmt.Errorf("illegal header regex")
-			}
-
-			patterns = append(patterns, pattern)
-		}
-
-		headers[name] = patterns
-	}
-
-	body, err := regexp.Compile(r.Body)
-	if err != nil {
-		return nil, fmt.Errorf("illegal body regex")
-	}
-
-	assertions := map[string]*regexp.Regexp{}
-	for key, assertion := range r.Assertions {
-		pattern, err := regexp.Compile(assertion)
-		if err != nil {
-			return nil, err
-		}
-
-		assertions[key] = pattern
+		extractors[key] = extractor
 	}
 
 	return &config.Response{
-		Status:      status,
-		Headers:     headers,
-		Body:        body,
-		Extract:     r.Extract,
-		ExtractList: r.ExtractList,
-		Assertions:  assertions,
+		Status:  status,
+		Extract: extractors,
 	}, nil
 }
 

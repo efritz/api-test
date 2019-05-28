@@ -1,14 +1,27 @@
 package config
 
-import "regexp"
+import (
+	"regexp"
 
-type Response struct {
-	Status      *regexp.Regexp
-	Headers     map[string][]*regexp.Regexp
-	Body        *regexp.Regexp
-	Extract     map[string]string
-	ExtractList map[string]string
-	Assertions  map[string]*regexp.Regexp
-	// TODO - json schema body
-	// TODO - other assertion types
-}
+	"github.com/xeipuuv/gojsonschema"
+)
+
+type (
+	Response struct {
+		Status  *regexp.Regexp
+		Extract map[string]*ValueExtractor
+	}
+
+	ValueExtractor struct {
+		JQ      string
+		IsList  bool
+		Pattern *regexp.Regexp
+		Assert  *ValueAssertion
+		Header  string
+	}
+
+	ValueAssertion struct {
+		Pattern *regexp.Regexp
+		Schema  *gojsonschema.Schema
+	}
+)

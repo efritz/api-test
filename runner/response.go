@@ -9,6 +9,7 @@ import (
 
 	"github.com/efritz/api-test/config"
 	jq "github.com/efritz/go-jq"
+	"github.com/xeipuuv/gojsonschema"
 )
 
 type RequestMatchError struct {
@@ -36,96 +37,142 @@ func matchResponse(resp *http.Response, expected *config.Response) (string, map[
 		})
 	}
 
-	headerGroups := map[string][]string{}
-	for key, patterns := range expected.Headers {
-		// TODO - not sure how to order these
-		for _, pattern := range patterns {
-			value := resp.Header.Get(key)
-
-			match, groups := matchRegex(pattern, value)
-			if !match {
-				errors = append(errors, RequestMatchError{
-					Type:     fmt.Sprintf("Header '%s'", key),
-					Expected: fmt.Sprintf("%s", pattern),
-					Actual:   value,
-				})
-			}
-
-			headerGroups[key] = groups
-		}
-	}
-
-	match, bodyGroups := matchRegex(expected.Body, string(content))
-	if !match {
-		errors = append(errors, RequestMatchError{
-			Type:     "Body",
-			Expected: fmt.Sprintf("%s", expected.Body),
-			Actual:   string(content),
-		})
-	}
-
 	context := map[string]interface{}{
 		// TODO - rename these (keep it symmetric in derision as well)
 		"statusGroups": statusGroups,
-		"headerGroups": headerGroups,
-		"bodyGroups":   bodyGroups,
+		// TODO - put all headers here?
 	}
 
-	for key, expr := range expected.Extract {
-		value, err := extract(content, expr, false)
+	for key, extractor := range expected.Extract {
+		sourceType, source := getSource(extractor, resp, content)
+		value, matchError := getValue(extractor, resp, sourceType, source)
+		if matchError != nil {
+			errors = append(errors, *matchError)
+			continue
+		}
+
+		matchError, err := assert(extractor.Assert, sourceType, source)
 		if err != nil {
 			return "", nil, nil, err
 		}
 
-		context[key] = value
-	}
-
-	for key, expr := range expected.ExtractList {
-		value, err := extract(content, expr, true)
-		if err != nil {
-			return "", nil, nil, err
+		if matchError != nil {
+			errors = append(errors, *matchError)
+			continue
 		}
 
 		context[key] = value
 	}
-
-	extractionGroups := map[string][]string{}
-	for key, pattern := range expected.Assertions {
-		rawValue := context[key]
-		strValue := fmt.Sprintf("%v", rawValue)
-
-		match, groups := matchRegex(pattern, strValue)
-		if !match {
-			errors = append(errors, RequestMatchError{
-				Type:     key,
-				Expected: fmt.Sprintf("%s", pattern),
-				Actual:   strValue,
-			})
-		}
-
-		extractionGroups[key] = groups
-	}
-
-	context["extractionGroups"] = extractionGroups
 
 	return string(content), context, errors, nil
 }
 
-func matchRegex(re *regexp.Regexp, val string) (bool, []string) {
-	if re == nil {
-		return true, nil
+func getSource(
+	extractor *config.ValueExtractor,
+	resp *http.Response,
+	content []byte,
+) (string, string) {
+	if extractor.Header != "" {
+		return fmt.Sprintf("Header '%s'", extractor.Header), resp.Header[extractor.Header][0]
 	}
 
-	if !re.MatchString(val) {
-		return false, nil
-	}
-
-	return true, re.FindStringSubmatch(val)
+	return "body", string(content)
 }
 
-func extract(content []byte, expr string, all bool) (interface{}, error) {
+func getValue(
+	extractor *config.ValueExtractor,
+	resp *http.Response,
+	sourceType string,
+	source string,
+) (interface{}, *RequestMatchError) {
+	if extractor.JQ != "" {
+		value, err := extract(source, extractor.JQ, extractor.IsList)
+		if err != nil {
+			return nil, &RequestMatchError{
+				Type:     sourceType,
+				Expected: fmt.Sprintf("%s", extractor.JQ),
+				Actual:   source,
+			}
+		}
+
+		return value, nil
+	}
+
+	if extractor.Pattern != nil {
+		match, value := matchRegex(extractor.Pattern, source)
+		if !match {
+			return nil, &RequestMatchError{
+				Type:     sourceType,
+				Expected: fmt.Sprintf("%s", extractor.Pattern),
+				Actual:   source,
+			}
+		}
+
+		// TODO - collapse if no capture groups
+		return value, nil
+	}
+
+	return nil, nil
+}
+
+func assert(
+	assertion *config.ValueAssertion,
+	sourceType string,
+	value interface{},
+) (*RequestMatchError, error) {
+	if assertion == nil {
+		return nil, nil
+	}
+
+	if assertion.Pattern != nil {
+		// TODO - enforce string?
+		strValue := fmt.Sprintf("%s", value)
+
+		if match, _ := matchRegex(assertion.Pattern, strValue); !match {
+			return &RequestMatchError{
+				Type:     sourceType,
+				Expected: fmt.Sprintf("%s", assertion.Pattern),
+				Actual:   strValue,
+			}, nil
+		}
+	}
+
+	if assertion.Schema != nil {
+		result, err := assertion.Schema.Validate(gojsonschema.NewGoLoader(value))
+		if err != nil {
+			return nil, err
+		}
+
+		if !result.Valid() {
+			validationErrors := []string{}
+			for _, validationError := range result.Errors() {
+				validationErrors = append(
+					validationErrors,
+					validationError.String(),
+				)
+			}
+
+			// TODO - indent as well
+			serialized, err := json.Marshal(value)
+			if err != nil {
+				return nil, err
+			}
+
+			// TODO - use validation errors
+			return &RequestMatchError{
+				Type:     sourceType,
+				Expected: fmt.Sprintf("%s", assertion.Pattern),
+				Actual:   string(serialized),
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func extract(content, expr string, all bool) (interface{}, error) {
 	var payload interface{}
-	if err := json.Unmarshal(content, &payload); err != nil {
+	if err := json.Unmarshal([]byte(content), &payload); err != nil {
 		return nil, err
 	}
 
@@ -143,4 +190,16 @@ func extract(content []byte, expr string, all bool) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+func matchRegex(re *regexp.Regexp, val string) (bool, []string) {
+	if re == nil {
+		return true, nil
+	}
+
+	if !re.MatchString(val) {
+		return false, nil
+	}
+
+	return true, re.FindStringSubmatch(val)
 }

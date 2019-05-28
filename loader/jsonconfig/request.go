@@ -13,12 +13,13 @@ import (
 )
 
 type Request struct {
-	URI      string                     `json:"uri"`
-	Method   string                     `json:"method"`
-	Auth     *BasicAuth                 `json:"auth"`
-	Headers  map[string]json.RawMessage `json:"headers"`
-	Body     string                     `json:"body"`
-	JSONBody json.RawMessage            `json:"json-body"` // TODO - this quotes in a way that is bad
+	URI     string                     `json:"uri"`
+	Method  string                     `json:"method"`
+	Auth    *BasicAuth                 `json:"auth"`
+	Headers map[string]json.RawMessage `json:"headers"`
+	Body    string                     `json:"body"`
+	// TODO - this quotes in a way that is bad
+	JSONBody json.RawMessage `json:"json-body"`
 }
 
 func (r *Request) Translate(globalRequest *GlobalRequest) (*config.Request, error) {
