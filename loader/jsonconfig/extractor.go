@@ -153,12 +153,12 @@ func unmarshalJSONSchemaValueAssertion(payload json.RawMessage) (*config.ValueAs
 
 	rawSchema, err := yaml.YAMLToJSON([]byte(properties.Schema))
 	if err != nil {
-		return nil, err // TODO - better errors
+		return nil, fmt.Errorf("failed to convert schema to JSON (%s)", err.Error())
 	}
 
 	schema, err := gojsonschema.NewSchema(gojsonschema.NewBytesLoader(rawSchema))
 	if err != nil {
-		return nil, err // TODO - better errors
+		return nil, fmt.Errorf("Failed to load schema (%s)", err.Error())
 	}
 
 	return &config.ValueAssertion{
