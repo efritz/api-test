@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 
 	"github.com/aphistic/sweet"
 	"github.com/efritz/api-test/config"
@@ -20,30 +19,44 @@ func (s *ResponseSuite) TestMatchResponse(t sweet.T) {
 			"X-Custom1": []string{"foo"},
 			"X-Custom2": []string{"bar", "baz"},
 		},
-		Body: ioutil.NopCloser(bytes.NewReader([]byte("data: payload"))),
+		Body: ioutil.NopCloser(bytes.NewReader([]byte(`{
+			"data": "payload"
+		}`))),
 	}
 
 	body, context, errors, err := matchResponse(resp, &config.Response{
 		Status: testPattern(`20(\d)`),
-		Headers: map[string][]*regexp.Regexp{
-			"X-Custom1": []*regexp.Regexp{testPattern(`.+`)},
-			"X-Custom2": []*regexp.Regexp{testPattern(`.+`)},
+		Extract: map[string]*config.ValueExtractor{
+			"foo": &config.ValueExtractor{
+				JQ: ".data",
+				Assert: &config.ValueAssertion{
+					Pattern: testPattern("pay(.+)"),
+				},
+			},
+			"bar": &config.ValueExtractor{
+				Pattern: testPattern(`.+`),
+				Header:  "X-Custom1",
+			},
+			"baz": &config.ValueExtractor{
+				Pattern: testPattern(`.+`),
+				Header:  "X-Custom2",
+			},
 		},
-		Body: testPattern(`^data: (.+)`),
 	})
 
 	Expect(err).To(BeNil())
-	Expect(body).To(Equal("data: payload"))
+	Expect(body).To(MatchJSON(`{"data": "payload"}`))
 	Expect(errors).To(BeEmpty())
 
 	Expect(context).To(Equal(map[string]interface{}{
-		"statusGroups": []string{"202", "2"},
-		"headerGroups": map[string][]string{
-			"X-Custom1": []string{"foo"},
-			"X-Custom2": []string{"bar"},
+		"foo":    "payload",
+		"bar":    []string{"foo"},
+		"baz":    []string{"bar"},
+		"status": 202,
+		"headers": map[string]string{
+			"X-Custom1": "foo",
+			"X-Custom2": "bar",
 		},
-		"bodyGroups":       []string{"data: payload", "payload"},
-		"extractionGroups": map[string][]string{},
 	}))
 }
 
@@ -65,7 +78,33 @@ func (s *ResponseSuite) TestMatchResponseMismatchedStatusCode(t sweet.T) {
 	}))
 }
 
-func (s *ResponseSuite) TestMatchResponseMismatchedHeader(t sweet.T) {
+func (s *ResponseSuite) TestMatchResponseJQExtractFailure(t sweet.T) {
+	resp := &http.Response{
+		StatusCode: http.StatusNoContent,
+		Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{invalid`))),
+	}
+
+	_, _, errors, err := matchResponse(resp, &config.Response{
+		Status: testPattern(`2..`),
+		Extract: map[string]*config.ValueExtractor{
+			"foo": &config.ValueExtractor{
+				JQ: ".data[].foo",
+				Assert: &config.ValueAssertion{
+					Pattern: testPattern(`\d{4}`),
+				},
+			},
+		},
+	})
+
+	Expect(err).To(BeNil())
+	Expect(errors).To(ConsistOf(RequestMatchError{
+		Type:     "Body",
+		Expected: ".data[].foo",
+		Actual:   "{invalid",
+	}))
+}
+
+func (s *ResponseSuite) TestMatchResponseRegexExtractFailure(t sweet.T) {
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
 		Header: map[string][]string{
@@ -75,9 +114,10 @@ func (s *ResponseSuite) TestMatchResponseMismatchedHeader(t sweet.T) {
 	}
 
 	_, _, errors, err := matchResponse(resp, &config.Response{
-		Headers: map[string][]*regexp.Regexp{
-			"X-Custom1": []*regexp.Regexp{
-				testPattern(`\d{8}`),
+		Extract: map[string]*config.ValueExtractor{
+			"foo": &config.ValueExtractor{
+				Pattern: testPattern(`\d{8}`),
+				Header:  "X-Custom1",
 			},
 		},
 	})
@@ -90,20 +130,67 @@ func (s *ResponseSuite) TestMatchResponseMismatchedHeader(t sweet.T) {
 	}))
 }
 
-func (s *ResponseSuite) TestMatchResponseMismatchedBody(t sweet.T) {
+func (s *ResponseSuite) TestMatchResponseRegexAssertionFailure(t sweet.T) {
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Body:       ioutil.NopCloser(bytes.NewReader([]byte("data: payload"))),
+		Body: ioutil.NopCloser(bytes.NewReader([]byte(`{
+			"data": [
+				{"foo": 123},
+				{"foo": 234},
+				{"foo": 345}
+			]
+		}`))),
 	}
 
 	_, _, errors, err := matchResponse(resp, &config.Response{
-		Body: testPattern(`data: (\d+)`),
+		Extract: map[string]*config.ValueExtractor{
+			"foo": &config.ValueExtractor{
+				JQ: ".data[].foo",
+				Assert: &config.ValueAssertion{
+					Pattern: testPattern(`\d{4}`),
+				},
+			},
+		},
 	})
 
 	Expect(err).To(BeNil())
 	Expect(errors).To(ConsistOf(RequestMatchError{
 		Type:     "Body",
-		Expected: `data: (\d+)`,
-		Actual:   "data: payload",
+		Expected: `\d{4}`,
+		Actual:   "123",
 	}))
+}
+
+func (s *ResponseSuite) TestMatchResponseJSONSchemaAssertionFailure(t sweet.T) {
+	data := `{
+		"data": [
+			{"foo": 123},
+			{"foo": 234},
+			{"foo": 345}
+		]
+	}`
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       ioutil.NopCloser(bytes.NewReader([]byte(data))),
+	}
+
+	_, _, errors, err := matchResponse(resp, &config.Response{
+		Extract: map[string]*config.ValueExtractor{
+			"foo": &config.ValueExtractor{
+				JQ: ".",
+				Assert: &config.ValueAssertion{
+					Schema: testSchema(`{
+						"type": "array",
+						"item": {
+							"type": "string"
+						}
+					}`),
+				},
+			},
+		},
+	})
+
+	Expect(err).To(BeNil())
+	Expect(errors[0].Actual).To(MatchJSON(data))
 }

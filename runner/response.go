@@ -55,7 +55,7 @@ func matchResponse(resp *http.Response, expected *config.Response) (string, map[
 			continue
 		}
 
-		matchError, err := assert(extractor.Assert, sourceType, source)
+		matchError, err := assert(extractor.Assert, sourceType, value)
 		if err != nil {
 			return "", nil, nil, err
 		}
@@ -81,7 +81,7 @@ func getSource(
 		return sourceType, resp.Header[extractor.Header][0]
 	}
 
-	return "body", string(content)
+	return "Body", string(content)
 }
 
 func getValue(
@@ -130,7 +130,7 @@ func assert(
 	}
 
 	if assertion.Pattern != nil {
-		strValue := fmt.Sprintf("%s", value)
+		strValue := fmt.Sprintf("%v", value)
 
 		if match, _ := matchRegex(assertion.Pattern, strValue); !match {
 			return &RequestMatchError{
@@ -156,17 +156,15 @@ func assert(
 				)
 			}
 
-			// TODO - indent as well
 			serialized, err := json.Marshal(value)
 			if err != nil {
 				return nil, err
 			}
 
-			// TODO - use validation errors
 			return &RequestMatchError{
 				Type:     sourceType,
-				Expected: fmt.Sprintf("%s", assertion.Pattern),
-				Actual:   string(serialized),
+				Expected: fmt.Sprintf("%s", assertion.Pattern), // TODO - display validation errors
+				Actual:   string(serialized),                   // TODO - indent
 			}, nil
 		}
 	}

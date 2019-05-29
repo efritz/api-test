@@ -11,6 +11,7 @@ import (
 	"github.com/aphistic/sweet"
 	junit "github.com/aphistic/sweet-junit"
 	. "github.com/onsi/gomega"
+	"github.com/xeipuuv/gojsonschema"
 )
 
 func TestMain(m *testing.M) {
@@ -37,4 +38,9 @@ func testTemplate(pattern string) *tmpl.Template {
 
 func testPattern(pattern string) *regexp.Regexp {
 	return regexp.MustCompile(pattern)
+}
+
+func testSchema(text string) *gojsonschema.Schema {
+	schema, _ := gojsonschema.NewSchema(gojsonschema.NewStringLoader(text))
+	return schema
 }

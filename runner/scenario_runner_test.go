@@ -33,7 +33,6 @@ func (s *ScenarioRunnerSuite) TestRun(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`r\d`),
 				},
 				Enabled: true,
 			},
@@ -44,7 +43,6 @@ func (s *ScenarioRunnerSuite) TestRun(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`r\d`),
 				},
 				Enabled: true,
 			},
@@ -55,7 +53,6 @@ func (s *ScenarioRunnerSuite) TestRun(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`r\d`),
 				},
 				Enabled: true,
 			},
@@ -105,7 +102,6 @@ func (s *ScenarioRunnerSuite) TestRunFailure(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`r\d`),
 				},
 				Enabled: true,
 			},
@@ -116,7 +112,11 @@ func (s *ScenarioRunnerSuite) TestRunFailure(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`missing pattern`),
+					Extract: map[string]*config.ValueExtractor{
+						"foo": &config.ValueExtractor{
+							Pattern: testPattern(`missing pattern`),
+						},
+					},
 				},
 				Enabled: true,
 			},
@@ -127,7 +127,6 @@ func (s *ScenarioRunnerSuite) TestRunFailure(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`r\d`),
 				},
 				Enabled: true,
 			},
@@ -227,7 +226,6 @@ func (s *ScenarioRunnerSuite) TestRunParallelFailure(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`r\d`),
 				},
 				Enabled: true,
 			},
@@ -238,7 +236,11 @@ func (s *ScenarioRunnerSuite) TestRunParallelFailure(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`missing pattern`),
+					Extract: map[string]*config.ValueExtractor{
+						"foo": &config.ValueExtractor{
+							Pattern: testPattern(`missing pattern`),
+						},
+					},
 				},
 				Enabled: true,
 			},
@@ -249,7 +251,6 @@ func (s *ScenarioRunnerSuite) TestRunParallelFailure(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`r\d`),
 				},
 				Enabled: true,
 			},
@@ -303,7 +304,6 @@ func (s *ScenarioRunnerSuite) TestRunFirstDisabled(t sweet.T) {
 				},
 				Response: &config.Response{
 					Status: testPattern("2.."),
-					Body:   testPattern(`ok`),
 				},
 				Enabled: true,
 			},
