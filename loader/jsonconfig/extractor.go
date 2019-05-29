@@ -93,7 +93,7 @@ func unmarshalRegexValueExtractor(payload json.RawMessage) (*config.ValueExtract
 
 	pattern, err := regexp.Compile(properties.Pattern)
 	if err != nil {
-		return nil, fmt.Errorf("illegal body regex")
+		return nil, fmt.Errorf("illegal extractor regex")
 	}
 
 	assertion, err := unmarshalValueAssertion(properties.Assert)
@@ -137,7 +137,7 @@ func unmarshalRegexValueAssertion(payload json.RawMessage) (*config.ValueAsserti
 
 	pattern, err := regexp.Compile(properties.Pattern)
 	if err != nil {
-		return nil, fmt.Errorf("illegal body regex")
+		return nil, fmt.Errorf("illegal assertion regex")
 	}
 
 	return &config.ValueAssertion{

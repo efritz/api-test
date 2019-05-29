@@ -19,6 +19,8 @@ func TestMain(m *testing.M) {
 
 		s.AddSuite(&AuthSuite{})
 		s.AddSuite(&ConfigSuite{})
+		s.AddSuite(&ExtractorSuite{})
+		s.AddSuite(&OverrideSuite{})
 		s.AddSuite(&RequestSuite{})
 		s.AddSuite(&ResponseSuite{})
 		s.AddSuite(&ScenarioSuite{})
