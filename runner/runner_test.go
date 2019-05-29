@@ -337,7 +337,10 @@ func newMockRunner(results []*TestResult, hook func() map[string]interface{}) *M
 
 	runner := NewMockScenarioRunner()
 	runner.RunFunc.SetDefaultHook(func(*http.Client, map[string]interface{}) map[string]interface{} {
-		ran = true
+		defer func() {
+			ran = true
+		}()
+
 		return hook()
 	})
 
