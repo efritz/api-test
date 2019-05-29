@@ -3,6 +3,7 @@
 // schema/config.yaml
 // schema/include.yaml
 // schema/override.yaml
+// schema/scenario.yaml
 package asset
 
 import (
@@ -45,6 +46,141 @@ func (fi bindataFileInfo) Sys() interface{} {
 }
 
 var _schemaConfigYaml = []byte(`---
+
+definitions:
+  stringOrList:
+    oneOf:
+      - type: string
+      - type: array
+        items:
+          type: string
+  options:
+    type: object
+    properties:
+      force-sequential:
+        type: boolean
+    additionalProperties: false
+  global-request:
+    type: object
+    properties:
+      base-url:
+        type: string
+      auth:
+        $ref: '#/definitions/auth'
+      headers:
+        $ref: '#/definitions/headers'
+    additionalProperties: false
+  headers:
+    type: object
+    additionalProperties:
+      $ref: '#/definitions/stringOrList'
+  auth:
+    type: object
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+    additionalProperties: false
+    required:
+      - username
+      - password
+
+type: object
+properties:
+  options:
+    $ref: '#/definitions/options'
+  global-request:
+    $ref: '#/definitions/global-request'
+  scenarios:
+    type: array
+  include:
+    $ref: '#/definitions/stringOrList'
+additionalProperties: false
+`)
+
+func schemaConfigYamlBytes() ([]byte, error) {
+	return _schemaConfigYaml, nil
+}
+
+func schemaConfigYaml() (*asset, error) {
+	bytes, err := schemaConfigYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "schema/config.yaml", size: 993, mode: os.FileMode(420), modTime: time.Unix(1559073484, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _schemaIncludeYaml = []byte(`---
+
+definitions:
+  stringOrList:
+    oneOf:
+      - type: string
+      - type: array
+        items:
+          type: string
+
+type: object
+properties:
+  scenarios:
+    type: array
+  include:
+    $ref: '#/definitions/stringOrList'
+additionalProperties: false
+`)
+
+func schemaIncludeYamlBytes() ([]byte, error) {
+	return _schemaIncludeYaml, nil
+}
+
+func schemaIncludeYaml() (*asset, error) {
+	bytes, err := schemaIncludeYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "schema/include.yaml", size: 257, mode: os.FileMode(420), modTime: time.Unix(1559073455, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _schemaOverrideYaml = []byte(`---
+
+definitions:
+  options:
+    type: object
+    properties:
+      force-sequential:
+        type: boolean
+    additionalProperties: false
+
+type: object
+properties:
+  options:
+    $ref: '#/definitions/options'
+additionalProperties: false
+`)
+
+func schemaOverrideYamlBytes() ([]byte, error) {
+	return _schemaOverrideYaml, nil
+}
+
+func schemaOverrideYaml() (*asset, error) {
+	bytes, err := schemaOverrideYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "schema/override.yaml", size: 239, mode: os.FileMode(420), modTime: time.Unix(1557884302, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _schemaScenarioYaml = []byte(`---
 
 definitions:
   extractor:
@@ -127,25 +263,6 @@ definitions:
       headers:
         $ref: '#/definitions/headers'
     additionalProperties: false
-  scenario:
-    type: object
-    properties:
-      name:
-        type: string
-      enabled:
-        type: boolean
-      dependencies:
-        $ref: '#/definitions/stringOrList'
-      parallel:
-        type: boolean
-      tests:
-        type: array
-        items:
-          $ref: '#/definitions/test'
-    additionalProperties: false
-    required:
-      - name
-      - tests
   test:
     type: object
     properties:
@@ -214,240 +331,35 @@ definitions:
 
 type: object
 properties:
-  options:
-    $ref: '#/definitions/options'
-  global-request:
-    $ref: '#/definitions/global-request'
-  scenarios:
+  name:
+    type: string
+  enabled:
+    type: boolean
+  dependencies:
+    $ref: '#/definitions/stringOrList'
+  parallel:
+    type: boolean
+  tests:
     type: array
     items:
-      $ref: '#/definitions/scenario'
-  include:
-    $ref: '#/definitions/stringOrList'
+      $ref: '#/definitions/test'
 additionalProperties: false
+required:
+  - name
+  - tests
 `)
 
-func schemaConfigYamlBytes() ([]byte, error) {
-	return _schemaConfigYaml, nil
+func schemaScenarioYamlBytes() ([]byte, error) {
+	return _schemaScenarioYaml, nil
 }
 
-func schemaConfigYaml() (*asset, error) {
-	bytes, err := schemaConfigYamlBytes()
+func schemaScenarioYaml() (*asset, error) {
+	bytes, err := schemaScenarioYamlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/config.yaml", size: 3686, mode: os.FileMode(420), modTime: time.Unix(1558971077, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _schemaIncludeYaml = []byte(`---
-
-definitions:
-  extractor:
-    oneOf:
-      - type: object
-        properties:
-          type:
-            type: string
-            const: jq
-          expr:
-            type: string
-          list:
-            type: boolean
-          assertion:
-            $ref: '#/definitions/assertion'
-          header:
-            type: string
-        additionalProperties: false
-        required:
-            - type
-            - expr
-      - type: object
-        properties:
-          type:
-            type: string
-            const: regex
-          pattern:
-            type: string
-          assertion:
-            $ref: '#/definitions/assertion'
-          header:
-            type: string
-        additionalProperties: false
-        required:
-            - type
-            - pattern
-  assertion:
-    oneOf:
-      - type: object
-        properties:
-          type:
-            type: string
-            const: regex
-          pattern:
-            type: string
-        additionalProperties: false
-        required:
-            - type
-            - pattern
-      - type: object
-        properties:
-          type:
-            type: string
-            const: jsonschema
-          schema:
-            type: string
-        additionalProperties: false
-        required:
-            - type
-            - schema
-  stringOrList:
-    oneOf:
-      - type: string
-      - type: array
-        items:
-          type: string
-  scenario:
-    type: object
-    properties:
-      name:
-        type: string
-      enabled:
-        type: boolean
-      dependencies:
-        $ref: '#/definitions/stringOrList'
-      parallel:
-        type: boolean
-      tests:
-        type: array
-        items:
-          $ref: '#/definitions/test'
-    additionalProperties: false
-    required:
-      - name
-      - tests
-  test:
-    type: object
-    properties:
-      name:
-        type: string
-      enabled:
-        type: boolean
-      request:
-        $ref: '#/definitions/request'
-      response:
-        $ref: '#/definitions/response'
-    additionalProperties: false
-    required:
-      - request
-  request:
-    type: object
-    properties:
-      uri:
-        type: string
-      method:
-        type: string
-        enum:
-          - get
-          - post
-          - put
-          - patch
-          - delete
-          - options
-      auth:
-        $ref: '#/definitions/auth'
-      headers:
-        $ref: '#/definitions/headers'
-      body:
-        type: string
-      json-body: {}
-    additionalProperties: false
-    required:
-      - uri
-  response:
-    type: object
-    properties:
-      status:
-        anyOf:
-          - type: string
-          - type: number
-      extract:
-        type: object
-        additionalProperties:
-          $ref: '#/definitions/extractor'
-    additionalProperties: false
-  headers:
-    type: object
-    additionalProperties:
-      $ref: '#/definitions/stringOrList'
-  auth:
-    type: object
-    properties:
-      username:
-        type: string
-      password:
-        type: string
-    additionalProperties: false
-    required:
-      - username
-      - password
-
-type: object
-properties:
-  scenarios:
-    type: array
-    items:
-      $ref: '#/definitions/scenario'
-  include:
-    $ref: '#/definitions/stringOrList'
-additionalProperties: false
-`)
-
-func schemaIncludeYamlBytes() ([]byte, error) {
-	return _schemaIncludeYaml, nil
-}
-
-func schemaIncludeYaml() (*asset, error) {
-	bytes, err := schemaIncludeYamlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "schema/include.yaml", size: 3240, mode: os.FileMode(420), modTime: time.Unix(1558971078, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _schemaOverrideYaml = []byte(`---
-
-definitions:
-  options:
-    type: object
-    properties:
-      force-sequential:
-        type: boolean
-    additionalProperties: false
-
-type: object
-properties:
-  options:
-    $ref: '#/definitions/options'
-additionalProperties: false
-`)
-
-func schemaOverrideYamlBytes() ([]byte, error) {
-	return _schemaOverrideYaml, nil
-}
-
-func schemaOverrideYaml() (*asset, error) {
-	bytes, err := schemaOverrideYamlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "schema/override.yaml", size: 239, mode: os.FileMode(420), modTime: time.Unix(1557884302, 0)}
+	info := bindataFileInfo{name: "schema/scenario.yaml", size: 3318, mode: os.FileMode(420), modTime: time.Unix(1559073394, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -507,6 +419,7 @@ var _bindata = map[string]func() (*asset, error){
 	"schema/config.yaml":   schemaConfigYaml,
 	"schema/include.yaml":  schemaIncludeYaml,
 	"schema/override.yaml": schemaOverrideYaml,
+	"schema/scenario.yaml": schemaScenarioYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -554,6 +467,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"config.yaml":   &bintree{schemaConfigYaml, map[string]*bintree{}},
 		"include.yaml":  &bintree{schemaIncludeYaml, map[string]*bintree{}},
 		"override.yaml": &bintree{schemaOverrideYaml, map[string]*bintree{}},
+		"scenario.yaml": &bintree{schemaScenarioYaml, map[string]*bintree{}},
 	}},
 }}
 

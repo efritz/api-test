@@ -13,9 +13,18 @@ import (
 	"github.com/ghodss/yaml"
 )
 
-type Loader struct {
-	loadedConfigs map[string]struct{}
-}
+type (
+	Loader struct {
+		loadedConfigs map[string]struct{}
+	}
+
+	jsonEnvelope struct {
+		Scenarios     []json.RawMessage         `json:"scenarios"`
+		Includes      json.RawMessage           `json:"include"`
+		Options       *jsonconfig.Options       `json:"options"`
+		GlobalRequest *jsonconfig.GlobalRequest `json:"global-request"`
+	}
+)
 
 func NewLoader() *Loader {
 	return &Loader{
@@ -29,11 +38,8 @@ func (l *Loader) Load(path string) (*config.Config, error) {
 		return nil, fmt.Errorf("failed to load config %s: %s", path, err.Error())
 	}
 
-	payload := &jsonconfig.MainConfig{
-		Options: &jsonconfig.Options{},
-	}
-
-	if err := unmarshal(path, data, "schema/config.yaml", &payload); err != nil {
+	payload, err := unmarshalConfig(path, data, "schema/config.yaml")
+	if err != nil {
 		return nil, err
 	}
 
@@ -130,8 +136,8 @@ func (l *Loader) loadInclude(
 		return nil, fmt.Errorf("failed to load config %s: %s", path, err.Error())
 	}
 
-	payload := &jsonconfig.BaseConfig{}
-	if err := unmarshal(path, data, "schema/include.yaml", &payload); err != nil {
+	payload, err := unmarshalConfig(path, data, "schema/include.yaml")
+	if err != nil {
 		return nil, err
 	}
 
@@ -204,6 +210,33 @@ func readPath(path string) ([]byte, error) {
 	}
 
 	return yaml.YAMLToJSON(rawData)
+}
+
+func unmarshalConfig(path string, data []byte, schemaName string) (*jsonconfig.Config, error) {
+	envelope := &jsonEnvelope{}
+	if err := unmarshal(path, data, schemaName, &envelope); err != nil {
+		return nil, err
+	}
+
+	for _, scenario := range envelope.Scenarios {
+		if err := schema.Validate("schema/scenario.yaml", scenario); err != nil {
+			return nil, fmt.Errorf(
+				"failed to validate input %s: %s",
+				path,
+				err.Error(),
+			)
+		}
+	}
+
+	payload := &jsonconfig.Config{
+		Options: &jsonconfig.Options{},
+	}
+
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, err
+	}
+
+	return payload, nil
 }
 
 func unmarshal(path string, data []byte, schemaName string, payload interface{}) error {

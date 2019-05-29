@@ -7,15 +7,11 @@ import (
 )
 
 type (
-	BaseConfig struct {
-		Scenarios []*Scenario     `json:"scenarios"`
-		Includes  json.RawMessage `json:"include"`
-	}
-
-	MainConfig struct {
-		*BaseConfig
-		Options       *Options       `json:"options"`
-		GlobalRequest *GlobalRequest `json:"global-request"`
+	Config struct {
+		Scenarios     []*Scenario     `json:"scenarios"`
+		Includes      json.RawMessage `json:"include"`
+		Options       *Options        `json:"options"`
+		GlobalRequest *GlobalRequest  `json:"global-request"`
 	}
 
 	Options struct {
@@ -29,7 +25,7 @@ type (
 	}
 )
 
-func (c *BaseConfig) Translate(globalRequest *GlobalRequest) ([]*config.Scenario, error) {
+func (c *Config) Translate(globalRequest *GlobalRequest) ([]*config.Scenario, error) {
 	scenarios := []*config.Scenario{}
 	for _, jsonScenario := range c.Scenarios {
 		scenario, err := jsonScenario.Translate(globalRequest)

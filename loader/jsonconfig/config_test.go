@@ -9,7 +9,7 @@ import (
 type ConfigSuite struct{}
 
 func (s *ConfigSuite) TestTranslate(t sweet.T) {
-	config := &BaseConfig{
+	config := &Config{
 		Scenarios: []*Scenario{
 			&Scenario{Name: "foo", Tests: []*Test{&Test{Request: &Request{URI: "/t1"}}}},
 			&Scenario{Name: "bar", Tests: []*Test{&Test{Request: &Request{URI: "/t2"}}}},
