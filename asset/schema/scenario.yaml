@@ -12,7 +12,7 @@ definitions:
             type: string
           list:
             type: boolean
-          assertion:
+          assert:
             $ref: '#/definitions/assertion'
           header:
             type: string
@@ -27,7 +27,7 @@ definitions:
             const: regex
           pattern:
             type: string
-          assertion:
+          assert:
             $ref: '#/definitions/assertion'
           header:
             type: string
