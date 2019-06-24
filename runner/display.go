@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -222,7 +224,7 @@ func formatRequest(req *http.Request, body string) string {
 		strings.ToUpper(req.Method),
 		req.URL,
 		formatHeaders(req.Header),
-		body,
+		formatBody(body, req.Header),
 	)
 
 	return fmt.Sprintf("%s\n", prefix(">", line))
@@ -234,10 +236,20 @@ func formatResponse(resp *http.Response, body string) string {
 		resp.StatusCode,
 		http.StatusText(resp.StatusCode),
 		formatHeaders(resp.Header),
-		body,
+		formatBody(body, resp.Header),
 	)
 
 	return fmt.Sprintf("%s\n", prefix("<", line))
+}
+
+func formatBody(body string, headers http.Header) string {
+	if headers.Get("Content-Type") == "application/json" {
+		out := bytes.Buffer{}
+		json.Indent(&out, []byte(body), "", "  ")
+		return out.String()
+	}
+
+	return body
 }
 
 func formatHeaders(headers http.Header) string {
