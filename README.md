@@ -18,8 +18,11 @@ The following command line flags are applicable for all IJ commands.
 | -----------------| ---------- | ----------- |
 | config           | f          | The path to the config file. If not supplied, `api-test.yaml` and `api-test.yml` are attempted in the current directory. |
 | force-sequential |            | Disable parallel execution. This will enforce that only one test is active at a time. The order that tests run are dependent only on scenario and test dependencies and may not consistent between runs. |
+| max-parallelism  |            | Limit parallel execution of tests. Setting this to one will have the same effect as supplying the `force-sequential` flag.
 | junit            | j          | The target file to write the JUnit report file. |
 | no-color         |            | Disable colorized output. |
+| verbose          | v          | Print requests and responses as they occur. |
+| env              | e          | Set an environment variable for use in request templates. |
 
 ## License
 
