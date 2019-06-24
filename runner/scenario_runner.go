@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/efritz/api-test/config"
+	"github.com/efritz/api-test/logging"
 )
 
 type (
@@ -20,6 +21,7 @@ type (
 
 	scenarioRunner struct {
 		scenario        *config.Scenario
+		logger          logging.Logger
 		results         []*TestResult
 		forceSequential bool
 		running         bool
@@ -29,13 +31,14 @@ type (
 	}
 )
 
-func NewScenarioRunner(scenario *config.Scenario, forceSequential bool) ScenarioRunner {
-	return newScenarioRunner(scenario, forceSequential)
+func NewScenarioRunner(scenario *config.Scenario, logger logging.Logger, forceSequential bool) ScenarioRunner {
+	return newScenarioRunner(scenario, logger, forceSequential)
 }
 
-func newScenarioRunner(scenario *config.Scenario, forceSequential bool) *scenarioRunner {
+func newScenarioRunner(scenario *config.Scenario, logger logging.Logger, forceSequential bool) *scenarioRunner {
 	return &scenarioRunner{
 		scenario:        scenario,
+		logger:          logger,
 		results:         []*TestResult{},
 		forceSequential: forceSequential,
 	}
@@ -218,6 +221,8 @@ func (r *scenarioRunner) runTest(
 			time.Sleep(test.RetryInterval)
 		}
 
+		r.logger.Info(formatRequest(req, reqBody))
+
 		started := time.Now()
 		resp, err := client.Do(req)
 		duration := time.Now().Sub(started)
@@ -230,6 +235,8 @@ func (r *scenarioRunner) runTest(
 		if err != nil {
 			return nil, err
 		}
+
+		r.logger.Info(formatResponse(resp, respBody))
 
 		r.mutex.Lock()
 		context[test.Name] = extraction

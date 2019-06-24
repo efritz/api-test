@@ -1,15 +1,18 @@
 package runner
 
-import "github.com/efritz/api-test/config"
+import (
+	"github.com/efritz/api-test/config"
+	"github.com/efritz/api-test/logging"
+)
 
 type (
 	ScenarioRunnerFactory interface {
-		New(scenario *config.Scenario, forceSequential bool) ScenarioRunner
+		New(scenario *config.Scenario, logger logging.Logger, forceSequential bool) ScenarioRunner
 	}
 
-	ScenarioRunnerFactoryFunc func(scenario *config.Scenario, forceSequential bool) ScenarioRunner
+	ScenarioRunnerFactoryFunc func(scenario *config.Scenario, logger logging.Logger, forceSequential bool) ScenarioRunner
 )
 
-func (f ScenarioRunnerFactoryFunc) New(scenario *config.Scenario, forceSequential bool) ScenarioRunner {
-	return f(scenario, forceSequential)
+func (f ScenarioRunnerFactoryFunc) New(scenario *config.Scenario, logger logging.Logger, forceSequential bool) ScenarioRunner {
+	return f(scenario, logger, forceSequential)
 }

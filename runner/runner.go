@@ -19,12 +19,12 @@ type (
 		config                *config.Config
 		env                   []string
 		logger                logging.Logger
+		verbose               bool
 		junitReportPath       string
 		scenarioRunnerFactory ScenarioRunnerFactory
 		client                *http.Client
 		names                 []string
 		contexts              map[string]*ScenarioContext
-		halt                  chan struct{}
 		submitMutex           sync.Mutex
 		sequenceMutex         sync.Mutex
 		wg                    sync.WaitGroup
@@ -55,13 +55,17 @@ func NewRunner(
 		junitReportPath:       "",
 		scenarioRunnerFactory: ScenarioRunnerFactoryFunc(NewScenarioRunner),
 		client:                client,
-		halt:                  make(chan struct{}),
 		names:                 []string{},
 		contexts:              map[string]*ScenarioContext{},
 	}
 
 	for _, f := range runnerConfigs {
 		f(r)
+	}
+
+	var scenarioLogger logging.Logger = logging.NilLogger
+	if r.verbose {
+		scenarioLogger = r.logger
 	}
 
 	for name := range config.Scenarios {
@@ -75,7 +79,7 @@ func NewRunner(
 
 		r.contexts[name] = &ScenarioContext{
 			Scenario: scenario,
-			Runner:   r.scenarioRunnerFactory.New(scenario, config.Options.ForceSequential),
+			Runner:   r.scenarioRunnerFactory.New(scenario, scenarioLogger, config.Options.ForceSequential),
 			Pending:  true,
 		}
 	}
@@ -84,51 +88,9 @@ func NewRunner(
 }
 
 func (r *Runner) Run() error {
-	started := time.Now()
 	r.submitReady()
-
-	go func() {
-		defer close(r.halt)
-		r.wg.Wait()
-	}()
-
-	pentimento.PrintProgress(
-		r.progressUpdater,
-		pentimento.WithWriter(logging.Writer(r.logger)),
-	)
-
-	displaySummary(r.logger, r.contexts, started)
-
-	if r.junitReportPath != "" {
-		content, err := formatJUnitReport(r.contexts)
-		if err != nil {
-			return err
-		}
-
-		content = append([]byte(xml.Header), content...)
-
-		if err := ioutil.WriteFile(r.junitReportPath, content, 0644); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *Runner) progressUpdater(p *pentimento.Printer) error {
-outer:
-	for {
-		select {
-		case <-r.halt:
-			break outer
-		case <-time.After(time.Millisecond * 100):
-		}
-
-		displayProgress(r.logger, r.names, r.contexts, p)
-	}
-
-	displayProgress(r.logger, r.names, r.contexts, p)
-	return nil
+	r.waitForTests()
+	return r.writeReport()
 }
 
 func (r *Runner) submitReady() {
@@ -229,4 +191,61 @@ func (r *Runner) getAllDependencies(context *ScenarioContext) []string {
 
 	sort.Strings(flattened)
 	return flattened
+}
+
+func (r *Runner) waitForTests() {
+	started := time.Now()
+
+	if r.verbose {
+		r.wg.Wait()
+	} else {
+		pentimento.PrintProgress(
+			r.progressUpdater,
+			pentimento.WithWriter(logging.Writer(r.logger)),
+		)
+	}
+
+	displaySummary(r.logger, r.contexts, started)
+}
+
+func (r *Runner) progressUpdater(p *pentimento.Printer) error {
+	halt := make(chan struct{})
+	defer close(halt)
+
+	go func() {
+	outer:
+		for {
+			select {
+			case <-halt:
+				break outer
+			case <-time.After(time.Millisecond * 100):
+			}
+
+			displayProgress(r.logger, r.names, r.contexts, p)
+		}
+
+		displayProgress(r.logger, r.names, r.contexts, p)
+	}()
+
+	r.wg.Wait()
+	return nil
+}
+
+func (r *Runner) writeReport() error {
+	if r.junitReportPath == "" {
+		return nil
+	}
+
+	content, err := formatJUnitReport(r.contexts)
+	if err != nil {
+		return err
+	}
+
+	content = append([]byte(xml.Header), content...)
+
+	if err := ioutil.WriteFile(r.junitReportPath, content, 0644); err != nil {
+		return err
+	}
+
+	return nil
 }

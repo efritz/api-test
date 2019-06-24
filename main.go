@@ -16,6 +16,7 @@ type Options struct {
 	DisableColor    bool
 	JUnitReportPath string
 	ForceSequential bool
+	Verbose         bool
 }
 
 const Version = "0.1.0"
@@ -28,6 +29,7 @@ func main() {
 	app.Flag("no-color", "Disable colorized output.").Default("false").BoolVar(&opts.DisableColor)
 	app.Flag("junit", "The path to write a JUnit XML report.").Short('j').StringVar(&opts.JUnitReportPath)
 	app.Flag("force-sequential", "Disable parallel execution.").Default("false").BoolVar(&opts.ForceSequential)
+	app.Flag("verbose", "Enable verbose logging.").Short('v').BoolVar(&opts.Verbose)
 	tests := app.Arg("tests", "A list of specific scenarios or tests to run.").Strings()
 
 	if _, err := app.Parse(os.Args[1:]); err != nil {
@@ -65,6 +67,7 @@ func main() {
 		runner.WithLogger(logger),
 		runner.WithEnvironment(opts.Env),
 		runner.WithJUnitReportPath(opts.JUnitReportPath),
+		runner.WithVerboseLogging(opts.Verbose),
 	)
 
 	if err := runner.Run(); err != nil {
