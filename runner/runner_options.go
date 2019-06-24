@@ -10,8 +10,8 @@ func WithLogger(logger logging.Logger) RunnerConfigFunc {
 	return func(r *Runner) { r.logger = logger }
 }
 
-func WithVerboseLogging(verbose bool) RunnerConfigFunc {
-	return func(r *Runner) { r.verbose = verbose }
+func WithVerbosityLevel(verbosityLevel logging.VerbosityLevel) RunnerConfigFunc {
+	return func(r *Runner) { r.verbosityLevel = verbosityLevel }
 }
 
 func WithEnvironment(env []string) RunnerConfigFunc {

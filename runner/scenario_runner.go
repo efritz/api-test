@@ -22,29 +22,41 @@ type (
 	}
 
 	scenarioRunner struct {
-		scenario      *config.Scenario
-		logger        logging.Logger
-		results       []*TestResult
-		running       bool
-		submitted     bool
-		ctx           context.Context
-		testSemaphore *semaphore.Weighted
-		mutex         sync.RWMutex
-		waitGroup     sync.WaitGroup
+		scenario       *config.Scenario
+		logger         logging.Logger
+		verbosityLevel logging.VerbosityLevel
+		results        []*TestResult
+		running        bool
+		submitted      bool
+		ctx            context.Context
+		testSemaphore  *semaphore.Weighted
+		mutex          sync.RWMutex
+		waitGroup      sync.WaitGroup
 	}
 )
 
-func NewScenarioRunner(scenario *config.Scenario, logger logging.Logger, testSemaphore *semaphore.Weighted) ScenarioRunner {
-	return newScenarioRunner(scenario, logger, testSemaphore)
+func NewScenarioRunner(
+	scenario *config.Scenario,
+	logger logging.Logger,
+	verbosityLevel logging.VerbosityLevel,
+	testSemaphore *semaphore.Weighted,
+) ScenarioRunner {
+	return newScenarioRunner(scenario, logger, verbosityLevel, testSemaphore)
 }
 
-func newScenarioRunner(scenario *config.Scenario, logger logging.Logger, testSemaphore *semaphore.Weighted) *scenarioRunner {
+func newScenarioRunner(
+	scenario *config.Scenario,
+	logger logging.Logger,
+	verbosityLevel logging.VerbosityLevel,
+	testSemaphore *semaphore.Weighted,
+) *scenarioRunner {
 	return &scenarioRunner{
-		scenario:      scenario,
-		logger:        logger,
-		results:       []*TestResult{},
-		ctx:           context.Background(),
-		testSemaphore: testSemaphore,
+		scenario:       scenario,
+		logger:         logger,
+		verbosityLevel: verbosityLevel,
+		results:        []*TestResult{},
+		ctx:            context.Background(),
+		testSemaphore:  testSemaphore,
 	}
 }
 
@@ -133,11 +145,6 @@ func (r *scenarioRunner) runAsync(
 ) {
 	r.waitGroup.Add(1)
 
-	if r.testSemaphore != nil {
-		_ = r.testSemaphore.Acquire(r.ctx, 1)
-		defer r.testSemaphore.Release(1)
-	}
-
 	go func() {
 		defer r.waitGroup.Done()
 
@@ -215,6 +222,11 @@ func (r *scenarioRunner) runTest(
 	context map[string]interface{},
 	index int,
 ) (testResult *TestResult, err error) {
+	if r.testSemaphore != nil {
+		_ = r.testSemaphore.Acquire(r.ctx, 1)
+		defer r.testSemaphore.Release(1)
+	}
+
 	test := r.scenario.Tests[index]
 
 	r.mutex.RLock()
@@ -225,12 +237,26 @@ func (r *scenarioRunner) runTest(
 		return nil, err
 	}
 
+	prefix := logging.NewPrefix(r.scenario.Name, test.Name)
+
 	for i := 0; i <= test.Retries; i++ {
 		if i > 0 {
+			r.logger.Log(
+				prefix,
+				r.logger.Colorize(
+					logging.ColorWarn,
+					"Previous attempt failed, retrying in %s", test.RetryInterval,
+				),
+			)
+
 			time.Sleep(test.RetryInterval)
 		}
 
-		r.logger.Info(formatRequest(req, reqBody))
+		r.logger.Log(prefix, "Attempting request...")
+
+		if r.verbosityLevel == logging.VerbosityLevelRequestResponse {
+			r.logger.Log(prefix, formatRequest(req, reqBody, r.logger.Colorized()))
+		}
 
 		started := time.Now()
 		resp, err := client.Do(req)
@@ -245,7 +271,9 @@ func (r *scenarioRunner) runTest(
 			return nil, err
 		}
 
-		r.logger.Info(formatResponse(resp, respBody))
+		if r.verbosityLevel == logging.VerbosityLevelRequestResponse {
+			r.logger.Log(prefix, formatResponse(resp, respBody, r.logger.Colorized()))
+		}
 
 		r.mutex.Lock()
 		context[test.Name] = extraction
@@ -262,7 +290,34 @@ func (r *scenarioRunner) runTest(
 		}
 
 		if len(errors) == 0 {
+			r.logger.Log(
+				prefix,
+				r.logger.Colorize(
+					logging.ColorInfo,
+					"Response matched expectation - test passed",
+				),
+			)
+
 			break
+		} else {
+
+			if i == test.Retries {
+				r.logger.Log(
+					prefix,
+					r.logger.Colorize(
+						logging.ColorError,
+						"Response did not match expectation - test failed",
+					),
+				)
+			} else {
+				r.logger.Log(
+					prefix,
+					r.logger.Colorize(
+						logging.ColorWarn,
+						"Response did not match expectation",
+					),
+				)
+			}
 		}
 	}
 

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hokaccha/go-prettyjson"
+
 	"github.com/efritz/api-test/config"
 	"github.com/efritz/api-test/logging"
 	"github.com/efritz/pentimento"
@@ -36,13 +38,13 @@ func displayProgress(
 			}
 
 			if result.Errored() {
-				details += logger.Colorize("E", logging.ColorError)
+				details += logger.Colorize(logging.ColorError, "E")
 			} else if result.Failed() {
-				details += logger.Colorize("F", logging.ColorError)
+				details += logger.Colorize(logging.ColorError, "F")
 			} else if result.Skipped {
-				details += logger.Colorize("S", logging.ColorWarn)
+				details += logger.Colorize(logging.ColorWarn, "S")
 			} else {
-				details += logger.Colorize(".", logging.ColorInfo)
+				details += logger.Colorize(logging.ColorInfo, ".")
 			}
 		}
 
@@ -110,32 +112,45 @@ func displaySummary(
 		}
 	}
 
-	logger.Info("")
+	logger.Log(nil, "")
 
 	if numScenariosSkipped > 0 || numTestsSkipped > 0 {
-		logger.Warn(
-			"Skipped %d scenarios and %d tests",
-			numScenariosSkipped,
-			numTestsSkipped,
+		logger.Log(
+			nil,
+			logger.Colorize(
+				logging.ColorWarn,
+				"Skipped %d scenarios and %d tests",
+				numScenariosSkipped,
+				numTestsSkipped,
+			),
 		)
 	}
 
 	if numFailures == 0 {
-		logger.Info(
-			"Ran %d scenarios and %d tests in %s (%s on the wall)",
-			numScenarios,
-			numTests,
-			formatSeconds(totalDuration),
-			formatSeconds(wallDuration),
+		logger.Log(
+			nil,
+
+			logger.Colorize(
+				logging.ColorInfo,
+				"Ran %d scenarios and %d tests in %s (%s on the wall)",
+				numScenarios,
+				numTests,
+				formatSeconds(totalDuration),
+				formatSeconds(wallDuration),
+			),
 		)
 
 		return
 	}
 
-	logger.Error(
-		"Failed %d out of %d ran\n",
-		numFailures,
-		numScenarios,
+	logger.Log(
+		nil,
+		logger.Colorize(
+			logging.ColorError,
+			"Failed %d out of %d ran\n",
+			numFailures,
+			numScenarios,
+		),
 	)
 
 	for _, context := range contexts {
@@ -144,10 +159,14 @@ func displaySummary(
 				continue
 			}
 
-			logger.Error(
-				"%s/%s: ",
-				context.Scenario.Name,
-				context.Scenario.Tests[i].Name,
+			logger.Log(
+				nil,
+				logger.Colorize(
+					logging.ColorError,
+					"%s/%s: ",
+					context.Scenario.Name,
+					context.Scenario.Tests[i].Name,
+				),
 			)
 
 			displayFailure(
@@ -167,23 +186,35 @@ func displayFailure(
 	result *TestResult,
 ) {
 	if result.Err != nil {
-		logger.Error("Failed to perform request: %s", result.Err.Error())
+		logger.Log(
+			nil,
+			logger.Colorize(
+				logging.ColorError,
+				"Failed to perform request: %s",
+				result.Err.Error(),
+			),
+		)
+
 		return
 	}
 
 	for _, err := range result.RequestMatchErrors {
-		logger.Error(
-			"> %s:\n\tActual: '%s'\n\tExpected: '%s'",
-			err.Type,
-			err.Actual,
-			err.Expected,
+		logger.Log(
+			nil,
+			logger.Colorize(
+				logging.ColorError,
+				"> %s:\n\tActual: '%s'\n\tExpected: '%s'",
+				err.Type,
+				err.Actual,
+				err.Expected,
+			),
 		)
 
-		logger.Error("")
+		logger.Log(nil, "")
 	}
 
-	logger.Info(formatRequest(result.Request, result.RequestBody))
-	logger.Info(formatResponse(result.Response, result.ResponseBody))
+	logger.Log(nil, formatRequest(result.Request, result.RequestBody, logger.Colorized()))
+	logger.Log(nil, formatResponse(result.Response, result.ResponseBody, logger.Colorized()))
 }
 
 func getStatus(
@@ -193,10 +224,10 @@ func getStatus(
 	statuses := map[bool]*pentimento.AnimatedString{
 		true:                      pentimento.ScrollingDots,
 		context.Pending:           pentimento.NewStaticString("   "),
-		context.Skipped:           pentimento.NewStaticString(logger.Colorize(" ✗ ", logging.ColorWarn)),
-		context.Runner.Errored():  pentimento.NewStaticString(logger.Colorize(" ✗ ", logging.ColorError)),
-		context.Runner.Failed():   pentimento.NewStaticString(logger.Colorize(" ✗ ", logging.ColorError)),
-		context.Runner.Resolved(): pentimento.NewStaticString(logger.Colorize(" ✓ ", logging.ColorInfo)),
+		context.Skipped:           pentimento.NewStaticString(logger.Colorize(logging.ColorWarn, " ✗ ")),
+		context.Runner.Errored():  pentimento.NewStaticString(logger.Colorize(logging.ColorError, " ✗ ")),
+		context.Runner.Failed():   pentimento.NewStaticString(logger.Colorize(logging.ColorError, " ✗ ")),
+		context.Runner.Resolved(): pentimento.NewStaticString(logger.Colorize(logging.ColorInfo, " ✓ ")),
 	}
 
 	return statuses[true]
@@ -218,32 +249,38 @@ func formatSeconds(duration time.Duration) string {
 	return fmt.Sprintf("%.2fm", float64(duration)/float64(time.Minute))
 }
 
-func formatRequest(req *http.Request, body string) string {
+func formatRequest(req *http.Request, body string, colorize bool) string {
 	line := fmt.Sprintf(
 		"%s %s\n%s\n%s\n",
 		strings.ToUpper(req.Method),
 		req.URL,
 		formatHeaders(req.Header),
-		formatBody(body, req.Header),
+		formatBody(body, req.Header, colorize),
 	)
 
 	return fmt.Sprintf("%s\n", prefix(">", line))
 }
 
-func formatResponse(resp *http.Response, body string) string {
+func formatResponse(resp *http.Response, body string, colorize bool) string {
 	line := fmt.Sprintf(
 		"%d %s\n%s\n%s\n",
 		resp.StatusCode,
 		http.StatusText(resp.StatusCode),
 		formatHeaders(resp.Header),
-		formatBody(body, resp.Header),
+		formatBody(body, resp.Header, colorize),
 	)
 
 	return fmt.Sprintf("%s\n", prefix("<", line))
 }
 
-func formatBody(body string, headers http.Header) string {
+func formatBody(body string, headers http.Header, colorize bool) string {
 	if headers.Get("Content-Type") == "application/json" {
+		if colorize {
+			if s, err := prettyjson.Marshal(json.RawMessage(body)); err == nil {
+				return string(s)
+			}
+		}
+
 		out := bytes.Buffer{}
 		json.Indent(&out, []byte(body), "", "  ")
 		return out.String()

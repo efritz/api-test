@@ -21,7 +21,7 @@ type (
 		config                *config.Config
 		env                   []string
 		logger                logging.Logger
-		verbose               bool
+		verbosityLevel        logging.VerbosityLevel
 		junitReportPath       string
 		scenarioRunnerFactory ScenarioRunnerFactory
 		client                *http.Client
@@ -29,7 +29,7 @@ type (
 		contexts              map[string]*ScenarioContext
 		submitMutex           sync.Mutex
 		ctx                   context.Context
-		sequenceSemaphore     *semaphore.Weighted
+		scenarioSemaphore     *semaphore.Weighted
 		wg                    sync.WaitGroup
 	}
 
@@ -52,6 +52,16 @@ func NewRunner(
 		},
 	}
 
+	scenarioSemaphore := makeScenarioSemaphore(
+		config.Options.ForceSequential,
+		len(config.Scenarios),
+	)
+
+	testSemaphore := makeTestSemaphore(
+		config.Options.ForceSequential,
+		config.Options.MaxParallelism,
+	)
+
 	r := &Runner{
 		config:                config,
 		logger:                logging.NilLogger,
@@ -61,7 +71,7 @@ func NewRunner(
 		names:                 []string{},
 		contexts:              map[string]*ScenarioContext{},
 		ctx:                   context.Background(),
-		sequenceSemaphore:     makeScenarioSemaphore(config.Options.ForceSequential, len(config.Scenarios)),
+		scenarioSemaphore:     scenarioSemaphore,
 	}
 
 	for _, f := range runnerConfigs {
@@ -69,7 +79,7 @@ func NewRunner(
 	}
 
 	var scenarioLogger logging.Logger = logging.NilLogger
-	if r.verbose {
+	if r.verbosityLevel != logging.VerbosityLevelNone {
 		scenarioLogger = r.logger
 	}
 
@@ -87,10 +97,8 @@ func NewRunner(
 			Runner: r.scenarioRunnerFactory.New(
 				scenario,
 				scenarioLogger,
-				makeTestSemaphore(
-					config.Options.ForceSequential,
-					config.Options.MaxParallelism,
-				),
+				r.verbosityLevel,
+				testSemaphore,
 			),
 			Pending: true,
 		}
@@ -160,8 +168,8 @@ func (r *Runner) submitReadyLocked() bool {
 func (r *Runner) submit(context *ScenarioContext) {
 	defer r.wg.Done()
 
-	_ = r.sequenceSemaphore.Acquire(r.ctx, 1)
-	defer r.sequenceSemaphore.Release(1)
+	_ = r.scenarioSemaphore.Acquire(r.ctx, 1)
+	defer r.scenarioSemaphore.Release(1)
 
 	context.Context = context.Runner.Run(r.client, r.makeContext(context))
 	r.submitReady()
@@ -206,13 +214,13 @@ func (r *Runner) getAllDependencies(context *ScenarioContext) []string {
 func (r *Runner) waitForTests() {
 	started := time.Now()
 
-	if r.verbose {
-		r.wg.Wait()
-	} else {
+	if r.verbosityLevel == logging.VerbosityLevelNone {
 		pentimento.PrintProgress(
 			r.progressUpdater,
 			pentimento.WithWriter(logging.Writer(r.logger)),
 		)
+	} else {
+		r.wg.Wait()
 	}
 
 	displaySummary(r.logger, r.contexts, started)

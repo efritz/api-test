@@ -7,8 +7,10 @@ require (
 	github.com/efritz/go-jq v0.0.0-20190422151141-094afba2f9b2
 	github.com/efritz/go-mockgen v0.0.0-20190429143807-9c47af25f336
 	github.com/efritz/pentimento v0.0.0-20190429011147-ade47d831101
+	github.com/fatih/color v1.7.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/uuid v1.1.1
+	github.com/hokaccha/go-prettyjson v0.0.0-20180920040306-f579f869bbfe
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/onsi/gomega v1.5.0
 	github.com/stevenle/topsort v0.0.0-20130922064739-8130c1d7596b

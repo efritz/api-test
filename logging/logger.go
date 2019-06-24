@@ -2,22 +2,23 @@ package logging
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/mgutz/ansi"
 )
 
 type (
 	Logger interface {
-		Raw(message string)
-		Log(format string, args ...interface{})
-		Info(format string, args ...interface{})
-		Warn(format string, args ...interface{})
-		Error(format string, args ...interface{})
-		Colorize(message string, color Color) string
+		Colorized() bool
+		Log(prefix *Prefix, format string, args ...interface{})
+		Colorize(color Color, format string, args ...interface{}) string
 	}
 
 	logger struct {
-		colorize bool
+		colorize   bool
+		mutex      sync.Mutex
+		touched    bool
+		lastPrefix *Prefix
 	}
 )
 
@@ -27,28 +28,28 @@ func NewLogger(colorize bool) Logger {
 	}
 }
 
-func (l *logger) Raw(message string) {
-	fmt.Print(message)
+func (l *logger) Colorized() bool {
+	return l.colorize
 }
 
-func (l *logger) Log(format string, args ...interface{})   { l.log(ColorNone, format, args...) }
-func (l *logger) Info(format string, args ...interface{})  { l.log(ColorInfo, format, args...) }
-func (l *logger) Warn(format string, args ...interface{})  { l.log(ColorWarn, format, args...) }
-func (l *logger) Error(format string, args ...interface{}) { l.log(ColorError, format, args...) }
+func (l *logger) Log(prefix *Prefix, format string, args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-func (l *logger) Colorize(message string, color Color) string {
+	fmt.Printf(formatPrefix(prefix, l.lastPrefix, l.colorize, !l.touched, format, args...))
+	l.touched = true
+	l.lastPrefix = prefix
+}
+
+func (l *logger) Colorize(color Color, format string, args ...interface{}) string {
 	if !l.colorize {
-		return message
+		return fmt.Sprintf(format, args...)
 	}
 
 	return fmt.Sprintf(
 		"%s%s%s",
 		colors[color],
-		message,
+		fmt.Sprintf(format, args...),
 		ansi.Reset,
 	)
-}
-
-func (l *logger) log(color Color, format string, args ...interface{}) {
-	fmt.Println(l.Colorize(fmt.Sprintf(format, args...), color))
 }

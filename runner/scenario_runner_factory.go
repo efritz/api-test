@@ -8,12 +8,26 @@ import (
 
 type (
 	ScenarioRunnerFactory interface {
-		New(scenario *config.Scenario, logger logging.Logger, testSemaphore *semaphore.Weighted) ScenarioRunner
+		New(
+			scenario *config.Scenario,
+			logger logging.Logger,
+			verbosityLevel logging.VerbosityLevel,
+			testSemaphore *semaphore.Weighted) ScenarioRunner
 	}
 
-	ScenarioRunnerFactoryFunc func(scenario *config.Scenario, logger logging.Logger, testSemaphore *semaphore.Weighted) ScenarioRunner
+	ScenarioRunnerFactoryFunc func(
+		scenario *config.Scenario,
+		logger logging.Logger,
+		verbosityLevel logging.VerbosityLevel,
+		testSemaphore *semaphore.Weighted,
+	) ScenarioRunner
 )
 
-func (f ScenarioRunnerFactoryFunc) New(scenario *config.Scenario, logger logging.Logger, testSemaphore *semaphore.Weighted) ScenarioRunner {
-	return f(scenario, logger, testSemaphore)
+func (f ScenarioRunnerFactoryFunc) New(
+	scenario *config.Scenario,
+	logger logging.Logger,
+	verbosityLevel logging.VerbosityLevel,
+	testSemaphore *semaphore.Weighted,
+) ScenarioRunner {
+	return f(scenario, logger, verbosityLevel, testSemaphore)
 }

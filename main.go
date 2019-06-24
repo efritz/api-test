@@ -17,7 +17,7 @@ type Options struct {
 	JUnitReportPath string
 	ForceSequential bool
 	MaxParallelism  int
-	Verbose         bool
+	Verbosity       int
 }
 
 const Version = "0.1.0"
@@ -31,7 +31,7 @@ func main() {
 	app.Flag("junit", "The path to write a JUnit XML report.").Short('j').StringVar(&opts.JUnitReportPath)
 	app.Flag("force-sequential", "Disable parallel execution.").Default("false").BoolVar(&opts.ForceSequential)
 	app.Flag("max-parallelism", "Limit the number of concurrent tests.").IntVar(&opts.MaxParallelism)
-	app.Flag("verbose", "Enable verbose logging.").Short('v').BoolVar(&opts.Verbose)
+	app.Flag("verbose", "Enable verbose logging.").Short('v').CounterVar(&opts.Verbosity)
 	tests := app.Arg("tests", "A list of specific scenarios or tests to run.").Strings()
 
 	if _, err := app.Parse(os.Args[1:]); err != nil {
@@ -43,7 +43,7 @@ func main() {
 
 	path, err := loader.GetConfigPath(opts.ConfigPath)
 	if err != nil {
-		logger.Error("error: %s", err.Error())
+		logger.Log(nil, "error: %s", logger.Colorize(logging.ColorError, err.Error()))
 		os.Exit(1)
 	}
 
@@ -56,12 +56,12 @@ func main() {
 
 	config, err := loader.Load(path, override)
 	if err != nil {
-		logger.Error("error: %s", err.Error())
+		logger.Log(nil, "error: %s", logger.Colorize(logging.ColorError, err.Error()))
 		os.Exit(1)
 	}
 
 	if err := config.EnableTests(*tests); err != nil {
-		logger.Error("error: %s", err.Error())
+		logger.Log(nil, "error: %s", logger.Colorize(logging.ColorError, err.Error()))
 		os.Exit(1)
 	}
 
@@ -70,11 +70,11 @@ func main() {
 		runner.WithLogger(logger),
 		runner.WithEnvironment(opts.Env),
 		runner.WithJUnitReportPath(opts.JUnitReportPath),
-		runner.WithVerboseLogging(opts.Verbose),
+		runner.WithVerbosityLevel(logging.ToVerbosityLevel(opts.Verbosity)),
 	)
 
 	if err := runner.Run(); err != nil {
-		logger.Error("error: %s", err.Error())
+		logger.Log(nil, "error: %s", logger.Colorize(logging.ColorError, err.Error()))
 		os.Exit(1)
 	}
 }
