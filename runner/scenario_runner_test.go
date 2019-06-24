@@ -60,7 +60,7 @@ func (s *ScenarioRunnerSuite) TestRun(t sweet.T) {
 		},
 	}
 
-	runner := NewScenarioRunner(scenario, logging.NilLogger, false)
+	runner := NewScenarioRunner(scenario, logging.NilLogger, nil)
 	runner.Run(http.DefaultClient, map[string]interface{}{})
 	Expect(runner.Resolved()).To(BeTrue())
 	Expect(runner.Errored()).To(BeFalse())
@@ -134,7 +134,7 @@ func (s *ScenarioRunnerSuite) TestRunFailure(t sweet.T) {
 		},
 	}
 
-	runner := NewScenarioRunner(scenario, logging.NilLogger, false)
+	runner := NewScenarioRunner(scenario, logging.NilLogger, nil)
 	runner.Run(http.DefaultClient, map[string]interface{}{})
 	Expect(runner.Resolved()).To(BeFalse())
 	Expect(runner.Errored()).To(BeFalse())
@@ -180,7 +180,7 @@ func (s *ScenarioRunnerSuite) TestRunParallel(t sweet.T) {
 		})
 	}
 
-	runner := NewScenarioRunner(scenario, logging.NilLogger, false)
+	runner := NewScenarioRunner(scenario, logging.NilLogger, nil)
 	runner.Run(http.DefaultClient, map[string]interface{}{})
 
 	maxStarted := <-started
@@ -259,7 +259,7 @@ func (s *ScenarioRunnerSuite) TestRunParallelFailure(t sweet.T) {
 		Parallel: true,
 	}
 
-	runner := NewScenarioRunner(scenario, logging.NilLogger, false)
+	runner := NewScenarioRunner(scenario, logging.NilLogger, nil)
 	runner.Run(http.DefaultClient, map[string]interface{}{})
 
 	results := runner.Results()
@@ -282,7 +282,7 @@ func (s *ScenarioRunnerSuite) TestRunDisabled(t sweet.T) {
 		},
 	}
 
-	runner := NewScenarioRunner(scenario, logging.NilLogger, false)
+	runner := NewScenarioRunner(scenario, logging.NilLogger, nil)
 	runner.Run(http.DefaultClient, map[string]interface{}{})
 
 	results := runner.Results()
@@ -311,7 +311,7 @@ func (s *ScenarioRunnerSuite) TestRunFirstDisabled(t sweet.T) {
 		},
 	}
 
-	runner := NewScenarioRunner(scenario, logging.NilLogger, false)
+	runner := NewScenarioRunner(scenario, logging.NilLogger, nil)
 	runner.Run(http.DefaultClient, map[string]interface{}{})
 
 	results := runner.Results()
@@ -328,7 +328,7 @@ func (s *ScenarioRunnerSuite) TestRunNotEnabled(t sweet.T) {
 		},
 	}
 
-	runner := NewScenarioRunner(scenario, logging.NilLogger, false)
+	runner := NewScenarioRunner(scenario, logging.NilLogger, nil)
 	runner.Run(http.DefaultClient, map[string]interface{}{})
 
 	results := runner.Results()

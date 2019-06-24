@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 )
-
 type asset struct {
 	bytes []byte
 	info  os.FileInfo
@@ -62,6 +61,8 @@ definitions:
     properties:
       force-sequential:
         type: boolean
+      max-parallelism:
+        type: integer
     additionalProperties: false
   global-request:
     type: object
@@ -112,7 +113,7 @@ func schemaConfigYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "schema/config.yaml", size: 993, mode: os.FileMode(420), modTime: time.Unix(1561038441, 0)}
+	info := bindataFileInfo{name: "schema/config.yaml", size: 1038, mode: os.FileMode(420), modTime: time.Unix(1561392417, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -423,8 +424,8 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"schema/config.yaml":   schemaConfigYaml,
-	"schema/include.yaml":  schemaIncludeYaml,
+	"schema/config.yaml": schemaConfigYaml,
+	"schema/include.yaml": schemaIncludeYaml,
 	"schema/override.yaml": schemaOverrideYaml,
 	"schema/scenario.yaml": schemaScenarioYaml,
 }
@@ -468,11 +469,10 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
-
 var _bintree = &bintree{nil, map[string]*bintree{
 	"schema": &bintree{nil, map[string]*bintree{
-		"config.yaml":   &bintree{schemaConfigYaml, map[string]*bintree{}},
-		"include.yaml":  &bintree{schemaIncludeYaml, map[string]*bintree{}},
+		"config.yaml": &bintree{schemaConfigYaml, map[string]*bintree{}},
+		"include.yaml": &bintree{schemaIncludeYaml, map[string]*bintree{}},
 		"override.yaml": &bintree{schemaOverrideYaml, map[string]*bintree{}},
 		"scenario.yaml": &bintree{schemaScenarioYaml, map[string]*bintree{}},
 	}},
@@ -524,3 +524,4 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
+

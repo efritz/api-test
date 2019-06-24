@@ -16,6 +16,7 @@ type Options struct {
 	DisableColor    bool
 	JUnitReportPath string
 	ForceSequential bool
+	MaxParallelism  int
 	Verbose         bool
 }
 
@@ -29,6 +30,7 @@ func main() {
 	app.Flag("no-color", "Disable colorized output.").Default("false").BoolVar(&opts.DisableColor)
 	app.Flag("junit", "The path to write a JUnit XML report.").Short('j').StringVar(&opts.JUnitReportPath)
 	app.Flag("force-sequential", "Disable parallel execution.").Default("false").BoolVar(&opts.ForceSequential)
+	app.Flag("max-parallelism", "Limit the number of concurrent tests.").IntVar(&opts.MaxParallelism)
 	app.Flag("verbose", "Enable verbose logging.").Short('v').BoolVar(&opts.Verbose)
 	tests := app.Arg("tests", "A list of specific scenarios or tests to run.").Strings()
 
@@ -48,6 +50,7 @@ func main() {
 	override := &config.Override{
 		Options: &config.Options{
 			ForceSequential: opts.ForceSequential,
+			MaxParallelism:  opts.MaxParallelism,
 		},
 	}
 

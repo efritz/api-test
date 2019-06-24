@@ -37,11 +37,13 @@ func (s *ConfigSuite) TestTranslate(t sweet.T) {
 func (s *ConfigSuite) TestTranslateOptions(t sweet.T) {
 	options := &Options{
 		ForceSequential: true,
+		MaxParallelism:  10,
 	}
 
 	translated, err := options.Translate()
 	Expect(err).To(BeNil())
 	Expect(translated).To(Equal(&config.Options{
 		ForceSequential: true,
+		MaxParallelism:  10,
 	}))
 }

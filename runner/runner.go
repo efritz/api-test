@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"encoding/xml"
 	"io/ioutil"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/efritz/api-test/config"
 	"github.com/efritz/api-test/logging"
 	"github.com/efritz/pentimento"
+	"golang.org/x/sync/semaphore"
 )
 
 type (
@@ -26,7 +28,8 @@ type (
 		names                 []string
 		contexts              map[string]*ScenarioContext
 		submitMutex           sync.Mutex
-		sequenceMutex         sync.Mutex
+		ctx                   context.Context
+		sequenceSemaphore     *semaphore.Weighted
 		wg                    sync.WaitGroup
 	}
 
@@ -57,6 +60,8 @@ func NewRunner(
 		client:                client,
 		names:                 []string{},
 		contexts:              map[string]*ScenarioContext{},
+		ctx:                   context.Background(),
+		sequenceSemaphore:     makeScenarioSemaphore(config.Options.ForceSequential, len(config.Scenarios)),
 	}
 
 	for _, f := range runnerConfigs {
@@ -79,8 +84,15 @@ func NewRunner(
 
 		r.contexts[name] = &ScenarioContext{
 			Scenario: scenario,
-			Runner:   r.scenarioRunnerFactory.New(scenario, scenarioLogger, config.Options.ForceSequential),
-			Pending:  true,
+			Runner: r.scenarioRunnerFactory.New(
+				scenario,
+				scenarioLogger,
+				makeTestSemaphore(
+					config.Options.ForceSequential,
+					config.Options.MaxParallelism,
+				),
+			),
+			Pending: true,
 		}
 	}
 
@@ -148,10 +160,8 @@ func (r *Runner) submitReadyLocked() bool {
 func (r *Runner) submit(context *ScenarioContext) {
 	defer r.wg.Done()
 
-	if r.config.Options.ForceSequential {
-		r.sequenceMutex.Lock()
-		defer r.sequenceMutex.Unlock()
-	}
+	_ = r.sequenceSemaphore.Acquire(r.ctx, 1)
+	defer r.sequenceSemaphore.Release(1)
 
 	context.Context = context.Runner.Run(r.client, r.makeContext(context))
 	r.submitReady()
@@ -245,6 +255,29 @@ func (r *Runner) writeReport() error {
 
 	if err := ioutil.WriteFile(r.junitReportPath, content, 0644); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+//
+// Helpers
+
+func makeScenarioSemaphore(forceSequential bool, weight int) *semaphore.Weighted {
+	if forceSequential {
+		return semaphore.NewWeighted(1)
+	}
+
+	return semaphore.NewWeighted(int64(weight))
+}
+
+func makeTestSemaphore(forceSequential bool, maxParallelism int) *semaphore.Weighted {
+	if forceSequential {
+		return semaphore.NewWeighted(1)
+	}
+
+	if maxParallelism > 0 {
+		return semaphore.NewWeighted(int64(maxParallelism))
 	}
 
 	return nil

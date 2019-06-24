@@ -13,6 +13,7 @@ type (
 
 	Options struct {
 		ForceSequential bool
+		MaxParallelism  int
 	}
 
 	Override struct {
@@ -21,8 +22,14 @@ type (
 )
 
 func (c *Config) ApplyOverride(override *Override) {
-	if override != nil && override.Options.ForceSequential {
-		c.Options.ForceSequential = true
+	if override != nil {
+		if override.Options.ForceSequential {
+			c.Options.ForceSequential = true
+		}
+
+		if override.Options.MaxParallelism > 0 {
+			c.Options.MaxParallelism = override.Options.MaxParallelism
+		}
 	}
 }
 

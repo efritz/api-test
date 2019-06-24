@@ -16,6 +16,7 @@ type (
 
 	Options struct {
 		ForceSequential bool `json:"force-sequential"`
+		MaxParallelism  int  `json:"max-parallelism"`
 	}
 
 	GlobalRequest struct {
@@ -42,5 +43,6 @@ func (c *Config) Translate(globalRequest *GlobalRequest) ([]*config.Scenario, er
 func (o *Options) Translate() (*config.Options, error) {
 	return &config.Options{
 		ForceSequential: o.ForceSequential,
+		MaxParallelism:  o.MaxParallelism,
 	}, nil
 }

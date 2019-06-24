@@ -12,6 +12,8 @@ definitions:
     properties:
       force-sequential:
         type: boolean
+      max-parallelism:
+        type: integer
     additionalProperties: false
   global-request:
     type: object

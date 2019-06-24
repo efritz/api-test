@@ -7,6 +7,54 @@ import (
 
 type ConfigSuite struct{}
 
+func (s *ConfigSuite) TestApplyOverride(t sweet.T) {
+	config := &Config{
+		Options: &Options{},
+	}
+
+	config.ApplyOverride(&Override{
+		Options: &Options{
+			ForceSequential: true,
+			MaxParallelism:  10,
+		},
+	})
+
+	Expect(config.Options.ForceSequential).To(BeTrue())
+	Expect(config.Options.MaxParallelism).To(Equal(10))
+}
+
+func (s *ConfigSuite) TestApplyOverrideNoValues(t sweet.T) {
+	config := &Config{
+		Options: &Options{
+			ForceSequential: true,
+			MaxParallelism:  10,
+		},
+	}
+
+	config.ApplyOverride(&Override{
+		Options: &Options{
+			ForceSequential: false,
+			MaxParallelism:  0,
+		},
+	})
+
+	Expect(config.Options.ForceSequential).To(BeTrue())
+	Expect(config.Options.MaxParallelism).To(Equal(10))
+}
+
+func (s *ConfigSuite) TestApplyOverrideNil(t sweet.T) {
+	config := &Config{
+		Options: &Options{
+			ForceSequential: true,
+			MaxParallelism:  10,
+		},
+	}
+
+	config.ApplyOverride(nil)
+	Expect(config.Options.ForceSequential).To(BeTrue())
+	Expect(config.Options.MaxParallelism).To(Equal(10))
+}
+
 func (s *ConfigSuite) TestEnableTests(t sweet.T) {
 	config := &Config{
 		Scenarios: map[string]*Scenario{

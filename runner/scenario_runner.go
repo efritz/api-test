@@ -1,12 +1,14 @@
 package runner
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/efritz/api-test/config"
 	"github.com/efritz/api-test/logging"
+	"golang.org/x/sync/semaphore"
 )
 
 type (
@@ -20,27 +22,29 @@ type (
 	}
 
 	scenarioRunner struct {
-		scenario        *config.Scenario
-		logger          logging.Logger
-		results         []*TestResult
-		forceSequential bool
-		running         bool
-		submitted       bool
-		mutex           sync.RWMutex
-		waitGroup       sync.WaitGroup
+		scenario      *config.Scenario
+		logger        logging.Logger
+		results       []*TestResult
+		running       bool
+		submitted     bool
+		ctx           context.Context
+		testSemaphore *semaphore.Weighted
+		mutex         sync.RWMutex
+		waitGroup     sync.WaitGroup
 	}
 )
 
-func NewScenarioRunner(scenario *config.Scenario, logger logging.Logger, forceSequential bool) ScenarioRunner {
-	return newScenarioRunner(scenario, logger, forceSequential)
+func NewScenarioRunner(scenario *config.Scenario, logger logging.Logger, testSemaphore *semaphore.Weighted) ScenarioRunner {
+	return newScenarioRunner(scenario, logger, testSemaphore)
 }
 
-func newScenarioRunner(scenario *config.Scenario, logger logging.Logger, forceSequential bool) *scenarioRunner {
+func newScenarioRunner(scenario *config.Scenario, logger logging.Logger, testSemaphore *semaphore.Weighted) *scenarioRunner {
 	return &scenarioRunner{
-		scenario:        scenario,
-		logger:          logger,
-		results:         []*TestResult{},
-		forceSequential: forceSequential,
+		scenario:      scenario,
+		logger:        logger,
+		results:       []*TestResult{},
+		ctx:           context.Background(),
+		testSemaphore: testSemaphore,
 	}
 }
 
@@ -78,7 +82,7 @@ func (r *scenarioRunner) run(client *http.Client, context map[string]interface{}
 				r.handleDisabled(i, ch)
 			} else if !test.Enabled {
 				r.handleSkipped(i, ch)
-			} else if r.scenario.Parallel && !r.forceSequential {
+			} else if r.scenario.Parallel {
 				r.runAsync(client, context, i, ch)
 			} else if !r.runSync(client, context, i, ch) {
 				break
@@ -128,6 +132,11 @@ func (r *scenarioRunner) runAsync(
 	ch chan *TestResult,
 ) {
 	r.waitGroup.Add(1)
+
+	if r.testSemaphore != nil {
+		_ = r.testSemaphore.Acquire(r.ctx, 1)
+		defer r.testSemaphore.Release(1)
+	}
 
 	go func() {
 		defer r.waitGroup.Done()
