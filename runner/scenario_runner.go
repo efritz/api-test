@@ -202,9 +202,7 @@ func (r *scenarioRunner) runTest(
 	client *http.Client,
 	context map[string]interface{},
 	index int,
-) (*TestResult, error) {
-	started := time.Now()
-
+) (testResult *TestResult, err error) {
 	test := r.scenario.Tests[index]
 
 	r.mutex.RLock()
@@ -215,29 +213,42 @@ func (r *scenarioRunner) runTest(
 		return nil, err
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
+	for i := 0; i <= test.Retries; i++ {
+		if i > 0 {
+			time.Sleep(test.RetryInterval)
+		}
+
+		started := time.Now()
+		resp, err := client.Do(req)
+		duration := time.Now().Sub(started)
+
+		if err != nil {
+			return nil, err
+		}
+
+		respBody, extraction, errors, err := matchResponse(resp, test.Response)
+		if err != nil {
+			return nil, err
+		}
+
+		r.mutex.Lock()
+		context[test.Name] = extraction
+		r.mutex.Unlock()
+
+		testResult = &TestResult{
+			Index:              index,
+			Request:            req,
+			RequestBody:        reqBody,
+			Response:           resp,
+			ResponseBody:       respBody,
+			RequestMatchErrors: errors,
+			Duration:           duration,
+		}
+
+		if len(errors) == 0 {
+			break
+		}
 	}
 
-	duration := time.Now().Sub(started)
-
-	respBody, extraction, errors, err := matchResponse(resp, test.Response)
-	if err != nil {
-		return nil, err
-	}
-
-	r.mutex.Lock()
-	context[test.Name] = extraction
-	r.mutex.Unlock()
-
-	return &TestResult{
-		Index:              index,
-		Request:            req,
-		RequestBody:        reqBody,
-		Response:           resp,
-		ResponseBody:       respBody,
-		RequestMatchErrors: errors,
-		Duration:           duration,
-	}, nil
+	return
 }

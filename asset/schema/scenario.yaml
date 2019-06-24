@@ -92,6 +92,10 @@ definitions:
         $ref: '#/definitions/request'
       response:
         $ref: '#/definitions/response'
+      retries:
+        type: number
+      retry-interval:
+        type: number
     additionalProperties: false
     required:
       - request

@@ -2,6 +2,7 @@ package jsonconfig
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/aphistic/sweet"
 	. "github.com/onsi/gomega"
@@ -21,6 +22,8 @@ func (s *TestSuite) TestTranslate(t sweet.T) {
 		Response: &Response{
 			Status: json.RawMessage(`"2.."`),
 		},
+		Retries:       10,
+		RetryInterval: 1.25,
 	}
 
 	translated, err := test.Translate(&GlobalRequest{
@@ -32,6 +35,8 @@ func (s *TestSuite) TestTranslate(t sweet.T) {
 	Expect(translated.Enabled).To(BeTrue())
 	Expect(testExec(translated.Request.URL)).To(Equal("http://test.io/users"))
 	Expect(translated.Response.Status.MatchString("204")).To(BeTrue())
+	Expect(translated.Retries).To(Equal(10))
+	Expect(translated.RetryInterval).To(Equal(time.Duration(1.25 * float64(time.Second))))
 }
 
 func (s *TestSuite) TestTranslateDefaultName(t sweet.T) {

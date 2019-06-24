@@ -3,15 +3,18 @@ package jsonconfig
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/efritz/api-test/config"
 )
 
 type Test struct {
-	Name     string    `json:"name"`
-	Enabled  *bool     `json:"enabled"`
-	Request  *Request  `json:"request"`
-	Response *Response `json:"response"`
+	Name          string    `json:"name"`
+	Enabled       *bool     `json:"enabled"`
+	Request       *Request  `json:"request"`
+	Response      *Response `json:"response"`
+	Retries       int       `json:"retries"`
+	RetryInterval float64   `json:"retry-interval"`
 }
 
 func (t *Test) Translate(globalRequest *GlobalRequest) (*config.Test, error) {
@@ -48,9 +51,19 @@ func (t *Test) Translate(globalRequest *GlobalRequest) (*config.Test, error) {
 	}
 
 	return &config.Test{
-		Name:     name,
-		Enabled:  enabled,
-		Request:  request,
-		Response: response,
+		Name:          name,
+		Enabled:       enabled,
+		Request:       request,
+		Response:      response,
+		Retries:       t.Retries,
+		RetryInterval: getRetryInterval(t.RetryInterval),
 	}, nil
+}
+
+func getRetryInterval(rawRetryInterval float64) time.Duration {
+	if rawRetryInterval == 0 {
+		return time.Second
+	}
+
+	return time.Duration(float64(time.Second) * rawRetryInterval)
 }
