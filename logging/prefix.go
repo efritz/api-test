@@ -22,7 +22,7 @@ func NewPrefix(scenarioName, testName string) *Prefix {
 func formatPrefix(prefix, lastPrefix *Prefix, colorize, first bool, format string, args ...interface{}) string {
 	message := fmt.Sprintf(format, args...)
 	if prefix == nil {
-		return fmt.Sprintf("%s\n", message)
+		return fmt.Sprintf("%s\n", strings.TrimSpace(message))
 	}
 
 	return fmt.Sprintf(
