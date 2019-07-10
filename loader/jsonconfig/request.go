@@ -22,6 +22,8 @@ type Request struct {
 	JSONBody json.RawMessage `json:"json-body"`
 }
 
+var jsonContentTypeTemplate, _ = compile("application/json")
+
 func (r *Request) Translate(globalRequest *GlobalRequest) (*config.Request, error) {
 	method := sanitizeMethod(r.Method)
 	url := sanitizeURL(r.URI, globalRequest)
@@ -74,6 +76,9 @@ func (r *Request) Translate(globalRequest *GlobalRequest) (*config.Request, erro
 		if err != nil {
 			return nil, fmt.Errorf("illegal json body template (%s)", err.Error())
 		}
+
+		// TODO - test this
+		headerTemplates["Content-Type"] = []*tmpl.Template{jsonContentTypeTemplate}
 	}
 
 	return &config.Request{
