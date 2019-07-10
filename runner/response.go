@@ -55,6 +55,11 @@ func matchResponse(resp *http.Response, expected *config.Response) (string, map[
 			continue
 		}
 
+		if value == nil {
+			// TODO - add optional flag
+			continue
+		}
+
 		matchError, err := assert(extractor.Assert, sourceType, value)
 		if err != nil {
 			return "", nil, nil, err
@@ -191,7 +196,8 @@ func extract(content, expr string, all bool) (interface{}, error) {
 		return results[0], nil
 	}
 
-	return nil, nil
+	// TODO - make optional
+	return nil, fmt.Errorf("no value extracted")
 }
 
 func matchRegex(re *regexp.Regexp, val string) (bool, []string) {

@@ -229,6 +229,7 @@ func (r *scenarioRunner) runTest(
 
 	test := r.scenario.Tests[index]
 
+	// TODO - should build each time?
 	r.mutex.RLock()
 	req, reqBody, err := buildRequest(test.Request, context)
 	r.mutex.RUnlock()

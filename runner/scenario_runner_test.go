@@ -15,6 +15,10 @@ import (
 
 type ScenarioRunnerSuite struct{}
 
+//
+// TODO - test force sequential
+//
+
 func (s *ScenarioRunnerSuite) TestRun(t sweet.T) {
 	paths := []string{"/t1", "/t2", "/t3"}
 	reqBodies := []string{`{"req": "r1"}`, `{"req": "r2"}`, `{"req": "r3"}`}
